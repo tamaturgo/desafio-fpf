@@ -10,6 +10,7 @@ from celery.result import AsyncResult
 from ..celery_config import celery_app
 from ..services.result_storage import ResultStorage
 from ..tasks.image_processing_tasks import process_image_task
+from ..middleware.response_formatter import format_api_response, create_error_response
 from ...models.simple_models import (
     ImageUploadResponse, 
     TaskListResponse,
@@ -114,7 +115,8 @@ class ImageController:
                     detail="Resultado não encontrado"
                 )
         
-        return result
+        # Aplicar formatação padronizada à resposta
+        return format_api_response(result)
     
     async def list_results(
         self, 
