@@ -1,17 +1,79 @@
-version: '3.8'
-
 services:
+  # Redis - Backend para resultados do Celery
+  redis:
+    image: redis:7-alpine
+    container_name: fpf_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # RabbitMQ - Message broker para Celery
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: fpf_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  # API Principal
   api:
     build: .
     container_name: fpf_api
     ports:
-      - "8000:8000"
+      - "8080:8000"  # Mapeando para porta 8080 no host
     environment:
       - DEBUG=True
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672//
     volumes:
-      - ./src:/app/src
+      - ./src:/app/src:ro  # Read-only para evitar alterações
       - ./uploads:/app/uploads
+      - ./qr_crops:/app/qr_crops
+      - ./outputs:/app/outputs
+      - ./logs:/app/logs
     restart: unless-stopped
+    depends_on:
+      - redis
+      - rabbitmq
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker para processamento de imagens
+  celery_worker:
+    build: .
+    container_name: fpf_celery_worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672//
+    volumes:
+      - ./src:/app/src:ro  # Read-only
+      - ./uploads:/app/uploads
+      - ./qr_crops:/app/qr_crops
+      - ./outputs:/app/outputs
+      - ./logs:/app/logs
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - rabbitmq
+    command: celery -A src.api.celery_config:celery_app worker --loglevel=info
+
+
+
+volumes:
+  redis_data:
+  rabbitmq_data:
 
 

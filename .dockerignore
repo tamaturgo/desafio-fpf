@@ -1,0 +1,49 @@
+# Arquivos grandes e dados
+*.zip
+*.pt
+*.h5
+*.mp4
+*.avi
+*.weights
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.tox
+.coverage
+.cache
+.pytest_cache
+.mypy_cache
+
+# OS
+.DS_Store
+*.log
+
+# Desenvolvimento
+notebooks/
+runs/
+uploads/*
+!uploads/.gitkeep
+qr_crops/*
+!qr_crops/.gitkeep
+outputs/*
+!outputs/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Git e IDEs
+.git
+.gitignore
+.vscode
+.idea
+
+# Docker
+docker-compose*
+start_services.sh
+README.md
+datasets/
+data/
+models/

@@ -2,37 +2,20 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
-# Computer Vision
+# Computer Vision - versões otimizadas
 ultralytics==8.0.196
-opencv-python==4.8.1.78
+opencv-python-headless==4.8.1.78
 Pillow==10.0.1
 
 # QR Code Processing
 pyzbar==0.1.9
-qrcode[pil]==7.4.2
 
-# Data Processing
+# Data Processing - apenas essenciais
 numpy==2.3.2
-pandas==2.0.3
 
 # Queue Management
 celery==5.3.4
 redis==5.0.1
-
-# Database
-sqlalchemy==2.0.23
-alembic==1.12.1
-
-# Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.1
-
-# Code Quality
-black==23.9.1
-flake8==6.1.0
-mypy==1.6.1
 
 # Environment
 python-dotenv==1.0.0

@@ -4,8 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.routes import image_routes
 
 app = FastAPI(
-    title="FPF Vision API",
-    version="1.0.0"
+    title="FPF Vision API - Computer Vision Processing",
+    description="API para processamento assíncrono de imagens com detecção de objetos e QR codes usando YOLO",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 app.add_middleware(
@@ -16,11 +19,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(image_routes.router, prefix="/api/v1")
+# Inclui as rotas da API (que já têm o prefix /api/v1)
+app.include_router(image_routes.router)
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+@app.get("/")
+async def root():
+    """Endpoint raiz com informações da API."""
+    return {
+        "message": "FPF Vision API - Computer Vision Processing",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/v1/health"
+    }
 
 if __name__ == "__main__":
     import uvicorn
