@@ -145,5 +145,6 @@ Thumbs.db
 # Dataset files
 
 notebooks/merged_dataset/
+notebooks/merged_dataset.zip
 predictions/
 runs/
