@@ -327,14 +327,19 @@ def create_vision_processor(
     """
     default_config = {
         "confidence_threshold": 0.5,
-        "preprocessing_config": {
-            "target_size": (640, 640),
-            "normalize": True,
-            "enhance_contrast": True
-        }
+        "enable_qr_detection": True,
+        "save_crops": True
     }
     
     if config:
-        default_config.update(config)
+        # Filtra apenas os parâmetros válidos para VisionProcessor
+        valid_params = {
+            "confidence_threshold", 
+            "qr_crops_dir", 
+            "enable_qr_detection", 
+            "save_crops"
+        }
+        filtered_config = {k: v for k, v in config.items() if k in valid_params}
+        default_config.update(filtered_config)
     
     return VisionProcessor(model_path, **default_config)

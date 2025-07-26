@@ -8,6 +8,8 @@ from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 from ultralytics import YOLO
 import os
+import torch
+import torch.serialization
 
 
 class YOLODetector:
@@ -32,6 +34,28 @@ class YOLODetector:
     def _load_model(self):
         """Carrega o modelo YOLO."""
         try:
+            # Configura o PyTorch para permitir carregamento de classes YOLO
+            # Usar context manager para safety
+            import ultralytics.nn.tasks
+            import ultralytics.nn.modules
+            
+            safe_globals = [
+                ultralytics.nn.tasks.DetectionModel,
+            ]
+            
+            # Tenta adicionar módulos específicos se existirem
+            try:
+                safe_globals.extend([
+                    ultralytics.nn.modules.Conv,
+                    ultralytics.nn.modules.C2f,
+                    ultralytics.nn.modules.SPPF,
+                    ultralytics.nn.modules.Detect
+                ])
+            except AttributeError:
+                pass  # Alguns módulos podem não existir em todas as versões
+            
+            torch.serialization.add_safe_globals(safe_globals)
+            
             self.model = YOLO(self.model_path)
             # Obtém os nomes das classes do modelo
             if hasattr(self.model.model, 'names'):
@@ -39,7 +63,33 @@ class YOLODetector:
             print(f"Modelo YOLO carregado: {self.model_path}")
             print(f"Classes disponíveis: {self.class_names}")
         except Exception as e:
-            raise RuntimeError(f"Erro ao carregar modelo YOLO: {e}")
+            # Fallback: carrega o modelo usando weights_only=False como última opção
+            try:
+                print(f"Tentativa padrão falhou: {e}")
+                print("Tentando carregar com weights_only=False...")
+                
+                # Temporariamente define weights_only=False
+                import torch
+                original_load = torch.load
+                
+                def safe_load(*args, **kwargs):
+                    kwargs['weights_only'] = False
+                    return original_load(*args, **kwargs)
+                
+                torch.load = safe_load
+                
+                self.model = YOLO(self.model_path)
+                
+                # Restaura o torch.load original
+                torch.load = original_load
+                
+                if hasattr(self.model.model, 'names'):
+                    self.class_names = self.model.model.names
+                print(f"Modelo YOLO carregado com fallback: {self.model_path}")
+                print(f"Classes disponíveis: {self.class_names}")
+                
+            except Exception as fallback_e:
+                raise RuntimeError(f"Erro ao carregar modelo YOLO: {e}. Fallback também falhou: {fallback_e}")
     
     def detect(
         self, 
