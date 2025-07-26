@@ -1,6 +1,15 @@
 """
-Utilitários gerais para o sistema de visão computacional.
+Utilitários e funções auxiliares para o sistema de visão computacional.
 """
+
+import json
+import os
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+from pathlib import Path
+from ..logging_config import get_logger
+
+logger = get_logger(__name__)
 
 import json
 import os
@@ -33,7 +42,7 @@ def save_results_to_json(results: Dict, output_path: str, indent: int = 2) -> bo
         
         return True
     except Exception as e:
-        print(f"Erro ao salvar JSON: {e}")
+        logger.error(f"Erro ao salvar JSON: {e}")
         return False
 
 
@@ -77,7 +86,7 @@ def load_results_from_json(file_path: str) -> Dict:
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        print(f"Erro ao carregar JSON: {e}")
+        logger.error(f"Erro ao carregar JSON: {e}")
         return {}
 
 
@@ -205,51 +214,3 @@ def create_directory_structure(base_path: str) -> Dict[str, str]:
     return directories
 
 
-class Logger:
-    """
-    Logger simples para o sistema.
-    """
-    
-    def __init__(self, log_file: str = None):
-        """
-        Inicializa o logger.
-        
-        Args:
-            log_file: Caminho do arquivo de log (opcional)
-        """
-        self.log_file = log_file
-        
-        if log_file:
-            os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    
-    def log(self, message: str, level: str = "INFO"):
-        """
-        Registra uma mensagem de log.
-        
-        Args:
-            message: Mensagem a ser registrada
-            level: Nível do log (INFO, WARNING, ERROR)
-        """
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_message = f"[{timestamp}] {level}: {message}"
-        
-        print(log_message)
-        
-        if self.log_file:
-            try:
-                with open(self.log_file, 'a', encoding='utf-8') as f:
-                    f.write(log_message + "\n")
-            except Exception as e:
-                print(f"Erro ao escrever no log: {e}")
-    
-    def info(self, message: str):
-        """Registra mensagem de informação."""
-        self.log(message, "INFO")
-    
-    def warning(self, message: str):
-        """Registra mensagem de aviso."""
-        self.log(message, "WARNING")
-    
-    def error(self, message: str):
-        """Registra mensagem de erro."""
-        self.log(message, "ERROR")

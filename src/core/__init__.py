@@ -10,8 +10,7 @@ from .utils.helpers import (
     save_results_to_json,
     load_results_from_json,
     format_processing_summary,
-    get_image_files_from_directory,
-    Logger
+    get_image_files_from_directory
 )
 from .config import (
     DEFAULT_MODEL_PATH,
@@ -32,7 +31,6 @@ __all__ = [
     "load_results_from_json",
     "format_processing_summary",
     "get_image_files_from_directory",
-    "Logger",
     "DEFAULT_MODEL_PATH",
     "DEFAULT_CONFIG",
     "QR_CROPS_DIR",

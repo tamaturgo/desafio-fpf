@@ -49,6 +49,7 @@ class ImagePreprocessor:
         # Converte de BGR para RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
+        return image
     
     def resize_image(
         self, 
@@ -144,9 +145,10 @@ class ImagePreprocessor:
         
         processed = resized.copy()
         
-        # Normaliza se solicitado
+        # Normaliza se solicitado (mas mantém em uint8 para YOLO)
         if self.normalize:
-            processed = processed.astype(np.float32) / 255.0
+            # Apenas aplica uma leve normalização sem mudar o tipo
+            processed = cv2.convertScaleAbs(processed, alpha=1.0, beta=0)
         
         metadata = {}
         if return_metadata:

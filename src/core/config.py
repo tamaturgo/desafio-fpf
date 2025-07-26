@@ -16,6 +16,7 @@ DEFAULT_MODEL_PATH = str(CORE_DIR / "detection" / "model.pt")
 # Diretórios de saída
 QR_CROPS_DIR = str(BASE_DIR / "qr_crops")
 OUTPUTS_DIR = str(BASE_DIR / "outputs")
+PROCESSED_IMAGES_DIR = str(BASE_DIR / "outputs" / "processed_images")
 UPLOADS_DIR = str(BASE_DIR / "uploads")
 LOGS_DIR = str(BASE_DIR / "logs")
 
@@ -23,6 +24,10 @@ LOGS_DIR = str(BASE_DIR / "logs")
 DEFAULT_CONFIG = {
     "confidence_threshold": 0.5,
     "qr_crops_dir": QR_CROPS_DIR,
+    "processed_images_dir": PROCESSED_IMAGES_DIR,
+    "enable_qr_detection": True,
+    "save_crops": True,
+    "save_processed_images": True,
     "preprocessing_config": {
         "target_size": (640, 640),
         "normalize": True,

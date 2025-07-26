@@ -10,6 +10,9 @@ from ultralytics import YOLO
 import os
 import torch
 import torch.serialization
+from ..logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class YOLODetector:
@@ -60,13 +63,13 @@ class YOLODetector:
             # Obtém os nomes das classes do modelo
             if hasattr(self.model.model, 'names'):
                 self.class_names = self.model.model.names
-            print(f"Modelo YOLO carregado: {self.model_path}")
-            print(f"Classes disponíveis: {self.class_names}")
+            logger.info(f"Modelo YOLO carregado: {os.path.basename(self.model_path)}")
+            logger.info(f"Classes disponíveis: {self.class_names}")
         except Exception as e:
             # Fallback: carrega o modelo usando weights_only=False como última opção
             try:
-                print(f"Tentativa padrão falhou: {e}")
-                print("Tentando carregar com weights_only=False...")
+                logger.warning(f"Tentativa padrão falhou: {e}")
+                logger.info("Tentando carregar com weights_only=False")
                 
                 # Temporariamente define weights_only=False
                 import torch
@@ -85,8 +88,8 @@ class YOLODetector:
                 
                 if hasattr(self.model.model, 'names'):
                     self.class_names = self.model.model.names
-                print(f"Modelo YOLO carregado com fallback: {self.model_path}")
-                print(f"Classes disponíveis: {self.class_names}")
+                logger.info(f"Modelo YOLO carregado com fallback: {os.path.basename(self.model_path)}")
+                logger.info(f"Classes disponíveis: {self.class_names}")
                 
             except Exception as fallback_e:
                 raise RuntimeError(f"Erro ao carregar modelo YOLO: {e}. Fallback também falhou: {fallback_e}")
@@ -242,7 +245,7 @@ class YOLODetector:
             
             crop_info = {
                 "qr_id": qr_detection["qr_id"],
-                "crop": crop,
+                "crop_array": crop,  # Array para decodificação
                 "confidence": qr_detection["confidence"],
                 "position": {"x": x1, "y": y1},
                 "size": {"width": bbox["width"], "height": bbox["height"]}

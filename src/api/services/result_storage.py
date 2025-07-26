@@ -1,7 +1,15 @@
 """
 Serviço para armazenamento e recuperação de resultados de processamento.
-Utiliza Redis para cache e persistência de resultados.
 """
+
+import json
+import os
+from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional
+from pathlib import Path
+from ...core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 import json
 import redis
@@ -69,7 +77,7 @@ class ResultStorage:
             return True
             
         except Exception as e:
-            print(f"Erro ao salvar resultado {task_id}: {e}")
+            logger.error(f"Erro ao salvar resultado {task_id}: {e}")
             return False
     
     def get_result(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -92,7 +100,7 @@ class ResultStorage:
             return None
             
         except Exception as e:
-            print(f"Erro ao recuperar resultado {task_id}: {e}")
+            logger.error(f"Erro ao recuperar resultado {task_id}: {e}")
             return None
     
     def get_task_metadata(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -115,7 +123,7 @@ class ResultStorage:
             return None
             
         except Exception as e:
-            print(f"Erro ao recuperar metadados {task_id}: {e}")
+            logger.error(f"Erro ao recuperar metadados {task_id}: {e}")
             return None
     
     def list_all_results(self, limit: int = 100) -> List[Dict[str, Any]]:
@@ -144,7 +152,7 @@ class ResultStorage:
             return results
             
         except Exception as e:
-            print(f"Erro ao listar resultados: {e}")
+            logger.error(f"Erro ao listar resultados: {e}")
             return []
     
     def list_results_by_period(
@@ -178,7 +186,7 @@ class ResultStorage:
             return filtered_results[:limit]
             
         except Exception as e:
-            print(f"Erro ao filtrar resultados por período: {e}")
+            logger.error(f"Erro ao filtrar resultados por período: {e}")
             return []
     
     def list_results_by_status(self, status: str, limit: int = 100) -> List[Dict[str, Any]]:
@@ -203,7 +211,7 @@ class ResultStorage:
             return filtered_results[:limit]
             
         except Exception as e:
-            print(f"Erro ao filtrar resultados por status: {e}")
+            logger.error(f"Erro ao filtrar resultados por status: {e}")
             return []
     
     def delete_result(self, task_id: str) -> bool:
@@ -229,7 +237,7 @@ class ResultStorage:
             return True
             
         except Exception as e:
-            print(f"Erro ao deletar resultado {task_id}: {e}")
+            logger.error(f"Erro ao deletar resultado {task_id}: {e}")
             return False
     
     def cleanup_old_results(self, days_old: int = 7) -> Dict[str, int]:
@@ -269,7 +277,7 @@ class ResultStorage:
             }
             
         except Exception as e:
-            print(f"Erro na limpeza de resultados: {e}")
+            logger.error(f"Erro na limpeza de resultados: {e}")
             return {"deleted_count": 0, "error_count": 0, "error": str(e)}
     
     def get_storage_stats(self) -> Dict[str, Any]:
@@ -299,7 +307,7 @@ class ResultStorage:
             }
             
         except Exception as e:
-            print(f"Erro ao obter estatísticas: {e}")
+            logger.error(f"Erro ao obter estatísticas: {e}")
             return {"error": str(e)}
     
     def health_check(self) -> Dict[str, Any]:
