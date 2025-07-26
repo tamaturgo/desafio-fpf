@@ -84,9 +84,6 @@ class VisionProcessor:
         # Cria os diretórios se não existirem
         os.makedirs(self.qr_crops_dir, exist_ok=True)
         os.makedirs(self.processed_images_dir, exist_ok=True)
-        
-        logger.info(f"VisionProcessor inicializado com modelo: {model_path}")
-        logger.info(f"Confiança mínima: {confidence_threshold}")
     
     def process_image(
         self,
@@ -147,14 +144,7 @@ class VisionProcessor:
                     crop_info["decoded_content"] = qr_content or "DECODE_FAILED"
         
         # Decodifica QR codes diretamente da imagem original também
-        logger.info("Tentando decodificação direta da imagem")
         direct_qr_codes = self.qr_decoder.decode_qr_from_image(original_image)
-        logger.info(f"QR codes encontrados diretamente: {len(direct_qr_codes)}")
-        if direct_qr_codes:
-            for dqr in direct_qr_codes:
-                if dqr.get('content'):
-                    logger.info(f"QR direto decodificado: {dqr.get('content')}")
-                logger.info(f"   - QR direto: '{dqr.get('content', 'N/A')}' na posição {dqr.get('bounding_box', {})}")
         
         # Calcula tempo de processamento
         processing_time = (time.time() - start_time) * 1000  # em millisegundos
@@ -180,14 +170,12 @@ class VisionProcessor:
             }
         }
         
-        # Adiciona visualização se solicitado
         if return_visualization:
             vis_image = self.detector.visualize_detections(
                 original_image, detections, show_confidence=True
             )
             result["visualization"] = vis_image
         
-        # Salva a imagem processada com bounding boxes se habilitado
         processed_image_path = None
         if self.save_processed_images:
             processed_image_path = self._save_processed_image(
@@ -205,7 +193,6 @@ class VisionProcessor:
         if remove_source_file and isinstance(image_input, str) and os.path.exists(image_input):
             try:
                 os.remove(image_input)
-                logger.info(f"Arquivo removido: {os.path.basename(image_input)}")
                 result["source_file_removed"] = True
             except Exception as e:
                 logger.error(f"Erro ao remover arquivo: {e}")
@@ -254,7 +241,6 @@ class VisionProcessor:
         # Salva a imagem
         cv2.imwrite(output_path, vis_image)
         
-        logger.info(f"Imagem processada salva: {os.path.basename(output_path)}")
         return output_path
     
     def _format_objects(self, detected_objects: List[Dict]) -> List[Dict]:
@@ -327,6 +313,8 @@ class VisionProcessor:
             qr_content = "PENDING_SCAN"
             decode_source = "none"
             
+            
+
             # Prioriza o conteúdo do crop se disponível
             if crop_info.get("decoded_content"):
                 qr_content = crop_info["decoded_content"]
@@ -474,14 +462,13 @@ def create_vision_processor(
         Instância configurada do VisionProcessor
     """
     default_config = {
-        "confidence_threshold": 0.5,
+        "confidence_threshold": 0.9,
         "enable_qr_detection": True,
         "save_crops": True,
         "save_processed_images": True
     }
     
     if config:
-        # Filtra apenas os parâmetros válidos para VisionProcessor
         valid_params = {
             "confidence_threshold", 
             "qr_crops_dir", 

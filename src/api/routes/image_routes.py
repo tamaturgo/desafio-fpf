@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, File, UploadFile, Query
 
 from ..controllers.image_controller import image_controller
-from ...models.simple_models import (
+from ...models import (
     ImageUploadResponse, 
     TaskListResponse
 )

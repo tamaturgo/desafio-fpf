@@ -2,7 +2,6 @@
 Configurações padrão do sistema de visão computacional.
 """
 
-import os
 from pathlib import Path
 
 # Caminhos base - usar caminhos relativos para compatibilidade com Docker
@@ -20,9 +19,8 @@ PROCESSED_IMAGES_DIR = str(BASE_DIR / "outputs" / "processed_images")
 UPLOADS_DIR = str(BASE_DIR / "uploads")
 LOGS_DIR = str(BASE_DIR / "logs")
 
-# Configurações de processamento
 DEFAULT_CONFIG = {
-    "confidence_threshold": 0.5,
+    "confidence_threshold": 0.9,
     "qr_crops_dir": QR_CROPS_DIR,
     "processed_images_dir": PROCESSED_IMAGES_DIR,
     "enable_qr_detection": True,
@@ -44,7 +42,7 @@ PREPROCESSING_CONFIG = {
 
 # Configurações de detecção
 DETECTION_CONFIG = {
-    "confidence_threshold": 0.5,
+    "confidence_threshold": 0.9,
     "iou_threshold": 0.45
 }
 

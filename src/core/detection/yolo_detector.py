@@ -8,8 +8,6 @@ from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 from ultralytics import YOLO
 import os
-import torch
-import torch.serialization
 from ..logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -37,8 +35,6 @@ class YOLODetector:
     def _load_model(self):
         """Carrega o modelo YOLO."""
         try:
-            # Configura o PyTorch para permitir carregamento de classes YOLO
-            # Usar context manager para safety
             import ultralytics.nn.tasks
             import ultralytics.nn.modules
             
@@ -46,7 +42,6 @@ class YOLODetector:
                 ultralytics.nn.tasks.DetectionModel,
             ]
             
-            # Tenta adicionar módulos específicos se existirem
             try:
                 safe_globals.extend([
                     ultralytics.nn.modules.Conv,
@@ -55,23 +50,15 @@ class YOLODetector:
                     ultralytics.nn.modules.Detect
                 ])
             except AttributeError:
-                pass  # Alguns módulos podem não existir em todas as versões
-            
+                pass  
             torch.serialization.add_safe_globals(safe_globals)
             
             self.model = YOLO(self.model_path)
-            # Obtém os nomes das classes do modelo
             if hasattr(self.model.model, 'names'):
                 self.class_names = self.model.model.names
-            logger.info(f"Modelo YOLO carregado: {os.path.basename(self.model_path)}")
-            logger.info(f"Classes disponíveis: {self.class_names}")
         except Exception as e:
-            # Fallback: carrega o modelo usando weights_only=False como última opção
             try:
                 logger.warning(f"Tentativa padrão falhou: {e}")
-                logger.info("Tentando carregar com weights_only=False")
-                
-                # Temporariamente define weights_only=False
                 import torch
                 original_load = torch.load
                 
@@ -83,14 +70,10 @@ class YOLODetector:
                 
                 self.model = YOLO(self.model_path)
                 
-                # Restaura o torch.load original
                 torch.load = original_load
                 
                 if hasattr(self.model.model, 'names'):
                     self.class_names = self.model.model.names
-                logger.info(f"Modelo YOLO carregado com fallback: {os.path.basename(self.model_path)}")
-                logger.info(f"Classes disponíveis: {self.class_names}")
-                
             except Exception as fallback_e:
                 raise RuntimeError(f"Erro ao carregar modelo YOLO: {e}. Fallback também falhou: {fallback_e}")
     
@@ -113,24 +96,18 @@ class YOLODetector:
         """
         if confidence is None:
             confidence = self.confidence_threshold
-        
-        # Converte para BGR para o YOLO (se necessário)
+
         if len(image.shape) == 3 and image.dtype == np.float32:
-            # Se a imagem está normalizada, desnormaliza
             image_bgr = (image * 255).astype(np.uint8)
+
         else:
             image_bgr = image.astype(np.uint8)
         
-        # Converte RGB para BGR se necessário
         if image_bgr.shape[2] == 3:
             image_bgr = cv2.cvtColor(image_bgr, cv2.COLOR_RGB2BGR)
-        
-        # Executa a detecção
         results = self.model(image_bgr, conf=confidence, verbose=False)
         
-        # Processa os resultados
         detections = self._process_results(results[0], image, return_crops)
-        
         return detections
     
     def _process_results(
@@ -161,9 +138,9 @@ class YOLODetector:
         }
         
         if result.boxes is not None and len(result.boxes) > 0:
-            boxes = result.boxes.xyxy.cpu().numpy()  # Coordenadas x1,y1,x2,y2
-            scores = result.boxes.conf.cpu().numpy()  # Scores de confiança
-            classes = result.boxes.cls.cpu().numpy()  # IDs das classes
+            boxes = result.boxes.xyxy.cpu().numpy()  
+            scores = result.boxes.conf.cpu().numpy() 
+            classes = result.boxes.cls.cpu().numpy() 
             
             object_id = 1
             qr_id = 1
@@ -172,7 +149,6 @@ class YOLODetector:
                 x1, y1, x2, y2 = box.astype(int)
                 class_name = self.class_names.get(int(cls_id), f"class_{int(cls_id)}")
                 
-                # Dados básicos da detecção
                 detection_data = {
                     "confidence": float(score),
                     "bounding_box": {
@@ -184,13 +160,10 @@ class YOLODetector:
                     "class": class_name,
                     "class_id": int(cls_id)
                 }
-                
-                # Adiciona crop se solicitado
                 if return_crops:
                     crop = original_image[y1:y2, x1:x2]
                     detection_data["crop"] = crop
                 
-                # Separa entre objetos normais e QR codes
                 if "qr" in class_name.lower() or "barcode" in class_name.lower():
                     detection_data["qr_id"] = f"QR_{qr_id:03d}"
                     detections["qr_codes"].append(detection_data)
@@ -200,7 +173,6 @@ class YOLODetector:
                     detections["detected_objects"].append(detection_data)
                     object_id += 1
         
-        # Atualiza o resumo
         detections["summary"]["total_objects"] = len(detections["detected_objects"])
         detections["summary"]["total_qr_codes"] = len(detections["qr_codes"])
         
@@ -239,25 +211,22 @@ class YOLODetector:
             y1 = bbox["y"]
             x2 = x1 + bbox["width"]
             y2 = y1 + bbox["height"]
-            
-            # Extrai o crop
+
             crop = image[y1:y2, x1:x2]
             
             crop_info = {
                 "qr_id": qr_detection["qr_id"],
-                "crop_array": crop,  # Array para decodificação
+                "crop_array": crop, 
                 "confidence": qr_detection["confidence"],
                 "position": {"x": x1, "y": y1},
                 "size": {"width": bbox["width"], "height": bbox["height"]}
             }
             
-            # Salva o crop se um diretório foi especificado
             if save_directory:
                 os.makedirs(save_directory, exist_ok=True)
                 crop_filename = f"{qr_detection['qr_id']}_crop.jpg"
                 crop_path = os.path.join(save_directory, crop_filename)
                 
-                # Converte RGB para BGR para salvar com OpenCV
                 crop_bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
                 cv2.imwrite(crop_path, crop_bgr)
                 
@@ -285,19 +254,15 @@ class YOLODetector:
             Imagem com as detecções visualizadas
         """
         vis_image = image.copy()
-        
-        # Cores para diferentes tipos de objetos
         colors = {
-            "box": (0, 255, 0),      # Verde para caixas
-            "qr": (255, 0, 0),       # Vermelho para QR codes
-            "default": (0, 0, 255)   # Azul para outros objetos
+            "box": (0, 255, 0),      
+            "qr": (255, 0, 0),       
+            "default": (0, 0, 255)  
         }
         
-        # Desenha objetos detectados
         for obj in detections["detected_objects"]:
             self._draw_detection(vis_image, obj, colors.get("box", colors["default"]), show_confidence)
         
-        # Desenha QR codes
         for qr in detections["qr_codes"]:
             self._draw_detection(vis_image, qr, colors.get("qr", colors["default"]), show_confidence)
         
@@ -323,10 +288,8 @@ class YOLODetector:
         x1, y1 = bbox["x"], bbox["y"]
         x2, y2 = x1 + bbox["width"], y1 + bbox["height"]
         
-        # Desenha a bounding box
         cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
         
-        # Prepara o texto da label
         class_name = detection["class"]
         if show_confidence:
             confidence = detection["confidence"]
@@ -334,7 +297,6 @@ class YOLODetector:
         else:
             label = class_name
         
-        # Desenha o texto
         (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         cv2.rectangle(image, (x1, y1 - text_height - 10), (x1 + text_width, y1), color, -1)
         cv2.putText(image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)

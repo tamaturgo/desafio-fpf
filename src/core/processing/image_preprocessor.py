@@ -5,8 +5,6 @@ Módulo de pré-processamento de imagens para padronização antes da detecção
 import cv2
 import numpy as np
 from typing import Tuple, Optional
-from pathlib import Path
-
 
 class ImagePreprocessor:
     """
@@ -48,7 +46,6 @@ class ImagePreprocessor:
         
         # Converte de BGR para RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        return image
         return image
     
     def resize_image(
@@ -108,7 +105,6 @@ class ImagePreprocessor:
         
         if self.enhance_contrast:
             # Aplica CLAHE (Contrast Limited Adaptive Histogram Equalization)
-            # apenas no canal de luminância
             lab = cv2.cvtColor(enhanced, cv2.COLOR_RGB2LAB)
             l_channel, a_channel, b_channel = cv2.split(lab)
             
@@ -135,19 +131,13 @@ class ImagePreprocessor:
         Returns:
             Tupla com (imagem processada, metadados)
         """
-        original_shape = image.shape[:2]  # (height, width)
+        original_shape = image.shape[:2]  
         
-        # Melhora a qualidade da imagem
         enhanced = self.enhance_image_quality(image)
-        
-        # Redimensiona a imagem
         resized, scale_factor = self.resize_image(enhanced)
-        
         processed = resized.copy()
         
-        # Normaliza se solicitado (mas mantém em uint8 para YOLO)
         if self.normalize:
-            # Apenas aplica uma leve normalização sem mudar o tipo
             processed = cv2.convertScaleAbs(processed, alpha=1.0, beta=0)
         
         metadata = {}

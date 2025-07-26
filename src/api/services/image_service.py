@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any
 
-from ...models.simple_models import ProcessingResult, TaskStatus
+from ...models import ProcessingResult, TaskStatus
 
 
 class ImageProcessingService:
