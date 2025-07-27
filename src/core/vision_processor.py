@@ -5,46 +5,23 @@ Integra pré-processamento, detecção YOLO e extração de QR codes.
 
 import cv2
 import numpy as np
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime
 import os
 import time
+from collections import Counter
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
 
-from .processing.image_preprocessor import ImagePreprocessor
 from .detection.yolo_detector import YOLODetector
+from .logging_config import get_logger
+from .processing.image_preprocessor import ImagePreprocessor
 from .processing.qr_decoder import QRDecoder
 from .utils.coordinate_utils import convert_detections_to_original, validate_coordinates
-from .logging_config import get_logger
 
 logger = get_logger(__name__)
 
-import cv2
-import numpy as np
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime
-import os
-import time
-import logging
-from pathlib import Path
-
-from .processing.image_preprocessor import ImagePreprocessor
-from .detection.yolo_detector import YOLODetector
-from .processing.qr_decoder import QRDecoder
-
-# Importa configuração de logging
-from . import logging_config
-
-# Configura logging
-logger = logging.getLogger(__name__)
-
 
 class VisionProcessor:
-    """
-    Classe principal para processamento de visão computacional.
-    Integra todas as funcionalidades de detecção e processamento.
-    """
-    
     def __init__(
         self,
         model_path: str = None,
@@ -55,18 +32,6 @@ class VisionProcessor:
         save_crops: bool = True,
         save_processed_images: bool = True
     ):
-        """
-        Inicializa o processador de visão.
-        
-        Args:
-            model_path: Caminho para o modelo YOLO
-            qr_crops_dir: Diretório para salvar crops dos QR codes
-            processed_images_dir: Diretório para salvar imagens processadas com bounding boxes
-            confidence_threshold: Limite de confiança para detecções
-            enable_qr_detection: Se deve detectar QR codes
-            save_crops: Se deve salvar crops dos QR codes
-            save_processed_images: Se deve salvar imagens com bounding boxes
-        """
         from .config import DEFAULT_MODEL_PATH, QR_CROPS_DIR, PROCESSED_IMAGES_DIR
         
         self.model_path = model_path or DEFAULT_MODEL_PATH
@@ -77,17 +42,15 @@ class VisionProcessor:
         self.save_crops = save_crops
         self.save_processed_images = save_processed_images
         
-        # Inicializa os componentes com pré-processamento mínimo para preservar cores
         self.preprocessor = ImagePreprocessor(
             target_size=(640, 640),
             normalize=False,
             enhance_contrast=False,
-            minimal_preprocessing=True  # Ativa modo mínimo para preservar cores
+            minimal_preprocessing=True
         )
         self.detector = YOLODetector(self.model_path, confidence_threshold)
         self.qr_decoder = QRDecoder()
         
-        # Cria os diretórios se não existirem
         os.makedirs(self.qr_crops_dir, exist_ok=True)
         os.makedirs(self.processed_images_dir, exist_ok=True)
     
@@ -98,21 +61,8 @@ class VisionProcessor:
         return_visualization: bool = False,
         remove_source_file: bool = False
     ) -> Dict:
-        """
-        Processa uma imagem completa: pré-processamento, detecção e extração de QR.
-        
-        Args:
-            image_input: Pode ser um caminho (str) ou array numpy da imagem
-            save_qr_crops: Se deve salvar crops dos QR codes
-            return_visualization: Se deve retornar imagem com visualizações
-            remove_source_file: Se deve remover o arquivo original após processamento
-            
-        Returns:
-            Dicionário estruturado com todos os resultados
-        """
         start_time = time.time()
         
-        # Carrega a imagem se necessário
         if isinstance(image_input, str):
             original_image = self.preprocessor.load_image(image_input)
             image_source = image_input
@@ -120,22 +70,18 @@ class VisionProcessor:
             original_image = image_input.copy()
             image_source = "array"
         
-        # Pré-processamento
         processed_image, preprocessing_metadata = self.preprocessor.preprocess(
             original_image, return_metadata=True
         )
         
-        # Detecção de objetos
         detections = self.detector.detect(
             processed_image,
             confidence=self.confidence_threshold,
             return_crops=False
         )
         
-        # Converte coordenadas das detecções para a imagem original
         original_detections = convert_detections_to_original(detections, preprocessing_metadata)
         
-        # Valida e corrige coordenadas para garantir que estão dentro da imagem
         for obj in original_detections["detected_objects"]:
             obj["bounding_box"] = validate_coordinates(
                 obj["bounding_box"], original_image.shape[:2]
@@ -145,32 +91,24 @@ class VisionProcessor:
             qr["bounding_box"] = validate_coordinates(
                 qr["bounding_box"], original_image.shape[:2]
             )
-        
-        # Processa QR codes se detectados
         qr_crops_info = []
         if original_detections["qr_codes"]:
-            # Sempre extrai crops para decodificação, mesmo se não salvar
             qr_crops_info = self.detector.get_qr_crops(
                 original_image,
                 original_detections,
                 save_directory=self.qr_crops_dir if save_qr_crops else None
             )
             
-            # Decodifica QR codes dos crops
-            logger.info(f"Tentando decodificar {len(qr_crops_info)} QR codes detectados")
             for crop_info in qr_crops_info:
                 if crop_info.get("crop_array") is not None:
                     qr_id = crop_info.get("qr_id", "QR_UNKNOWN")
                     qr_content = self.qr_decoder.decode_multiple_attempts(crop_info["crop_array"], qr_id)
                     crop_info["decoded_content"] = qr_content or "DECODE_FAILED"
         
-        # Decodifica QR codes diretamente da imagem original também
         direct_qr_codes = self.qr_decoder.decode_qr_from_image(original_image)
         
-        # Calcula tempo de processamento
-        processing_time = (time.time() - start_time) * 1000  # em millisegundos
+        processing_time = (time.time() - start_time) * 1000
         
-        # Monta o resultado final
         result = {
             "scan_metadata": {
                 "timestamp": datetime.now().isoformat() + "Z",
@@ -197,7 +135,6 @@ class VisionProcessor:
             )
             result["visualization"] = vis_image
         
-        processed_image_path = None
         if self.save_processed_images:
             processed_image_path = self._save_processed_image(
                 original_image, original_detections, image_source
@@ -210,7 +147,6 @@ class VisionProcessor:
         else:
             result["processed_image"] = {"saved": False}
         
-        # Remove o arquivo original se solicitado (apenas para arquivos, não arrays)
         if remove_source_file and isinstance(image_input, str) and os.path.exists(image_input):
             try:
                 os.remove(image_input)
@@ -229,51 +165,24 @@ class VisionProcessor:
         detections: Dict, 
         image_source: str
     ) -> str:
-        """
-        Salva a imagem com bounding boxes desenhados.
-        
-        Args:
-            original_image: Imagem original
-            detections: Detecções realizadas
-            image_source: Fonte da imagem (caminho ou "array")
-            
-        Returns:
-            Caminho onde a imagem foi salva
-        """
-        # Gera visualização com bounding boxes
         vis_image = self.detector.visualize_detections(
             original_image, detections, show_confidence=True
         )
         
-        # Gera nome do arquivo baseado na fonte
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # microsegundos truncados
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
         
         if isinstance(image_source, str) and image_source != "array":
-            # Extrai nome base do arquivo original
             base_name = Path(image_source).stem
             filename = f"{base_name}_processed_{timestamp}.jpg"
         else:
-            # Nome genérico para arrays
             filename = f"processed_image_{timestamp}.jpg"
         
-        # Caminho completo para salvar
         output_path = os.path.join(self.processed_images_dir, filename)
-        
-        # Salva a imagem
         cv2.imwrite(output_path, vis_image)
         
         return output_path
     
     def _format_objects(self, detected_objects: List[Dict]) -> List[Dict]:
-        """
-        Formata objetos detectados para o formato de saída padrão.
-        
-        Args:
-            detected_objects: Lista de objetos detectados
-            
-        Returns:
-            Lista formatada de objetos
-        """
         formatted_objects = []
         
         for obj in detected_objects:
@@ -298,23 +207,10 @@ class VisionProcessor:
         qr_crops_info: List[Dict],
         direct_qr_codes: List[Dict] = None
     ) -> List[Dict]:
-        """
-        Formata QR codes detectados para o formato de saída padrão.
-        
-        Args:
-            qr_detections: Lista de QR codes detectados pelo YOLO
-            qr_crops_info: Informações dos crops salvos
-            direct_qr_codes: QR codes decodificados diretamente da imagem
-            
-        Returns:
-            Lista formatada de QR codes
-        """
         formatted_qr_codes = []
         
-        # Cria um mapa de crops por ID para fácil acesso
         crops_map = {crop["qr_id"]: crop for crop in qr_crops_info}
         
-        # Cria um mapa de QR codes decodificados por posição
         direct_qr_map = {}
         if direct_qr_codes:
             for direct_qr in direct_qr_codes:
@@ -326,17 +222,12 @@ class VisionProcessor:
             qr_id = qr["qr_id"]
             crop_info = crops_map.get(qr_id, {})
             
-            # Tenta encontrar o QR code decodificado correspondente
             bbox_key = f"{qr['bounding_box']['x']}_{qr['bounding_box']['y']}"
             direct_qr = direct_qr_map.get(bbox_key)
             
-            # Determina o conteúdo do QR code
             qr_content = "PENDING_SCAN"
             decode_source = "none"
             
-            
-
-            # Prioriza o conteúdo do crop se disponível
             if crop_info.get("decoded_content"):
                 qr_content = crop_info["decoded_content"]
                 decode_source = "crop"
@@ -361,7 +252,6 @@ class VisionProcessor:
                 }
             }
             
-            # Adiciona informações do crop se disponível
             if crop_info:
                 formatted_qr["crop_info"] = {
                     "saved": True,
@@ -381,21 +271,9 @@ class VisionProcessor:
         image_paths: List[str],
         save_qr_crops: bool = True
     ) -> List[Dict]:
-        """
-        Processa um lote de imagens.
-        
-        Args:
-            image_paths: Lista de caminhos para as imagens
-            save_qr_crops: Se deve salvar crops dos QR codes
-            
-        Returns:
-            Lista com resultados de cada imagem
-        """
         results = []
         
         for i, image_path in enumerate(image_paths):
-            logger.info(f"Processando imagem {i+1}/{len(image_paths)}: {os.path.basename(image_path)}")
-            
             try:
                 result = self.process_image(image_path, save_qr_crops)
                 result["batch_info"] = {
@@ -421,15 +299,6 @@ class VisionProcessor:
         return results
     
     def get_processing_stats(self, results: List[Dict]) -> Dict:
-        """
-        Calcula estatísticas de processamento para um lote de resultados.
-        
-        Args:
-            results: Lista de resultados de processamento
-            
-        Returns:
-            Dicionário com estatísticas
-        """
         stats = {
             "total_images": len(results),
             "successful_processing": 0,
@@ -460,8 +329,6 @@ class VisionProcessor:
         if processing_times:
             stats["average_processing_time_ms"] = sum(processing_times) / len(processing_times)
         
-        # Conta frequência de classes
-        from collections import Counter
         class_counts = Counter(all_classes)
         stats["classes_summary"] = dict(class_counts)
         
@@ -472,16 +339,6 @@ def create_vision_processor(
     model_path: str = None,
     config: Optional[Dict] = None
 ) -> VisionProcessor:
-    """
-    Factory function para criar um processador de visão com configurações customizadas.
-    
-    Args:
-        model_path: Caminho para o modelo YOLO
-        config: Dicionário com configurações personalizadas
-        
-    Returns:
-        Instância configurada do VisionProcessor
-    """
     default_config = {
         "confidence_threshold": 0.5,
         "enable_qr_detection": True,

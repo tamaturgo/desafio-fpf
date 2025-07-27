@@ -4,28 +4,17 @@ Módulo de detecção de objetos usando YOLO.
 
 import cv2
 import numpy as np
-from typing import List, Dict, Tuple, Optional
-from pathlib import Path
-from ultralytics import YOLO
 import os
+from typing import Dict, List, Optional, Tuple
+from ultralytics import YOLO
+
 from ..logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
 class YOLODetector:
-    """
-    Classe responsável pela detecção de objetos usando modelo YOLO.
-    """
-    
     def __init__(self, model_path: str, confidence_threshold: float = 0.5):
-        """
-        Inicializa o detector YOLO.
-        
-        Args:
-            model_path: Caminho para o modelo YOLO
-            confidence_threshold: Limite mínimo de confiança para detecções
-        """
         self.model_path = model_path
         self.confidence_threshold = confidence_threshold
         self.model = None
@@ -33,7 +22,6 @@ class YOLODetector:
         self._load_model()
     
     def _load_model(self):
-        """Carrega o modelo YOLO."""
         try:
             import ultralytics.nn.tasks
             import ultralytics.nn.modules
@@ -83,17 +71,6 @@ class YOLODetector:
         confidence: Optional[float] = None,
         return_crops: bool = False
     ) -> Dict:
-        """
-        Realiza detecção de objetos na imagem.
-        
-        Args:
-            image: Imagem de entrada (RGB)
-            confidence: Limite de confiança (se None, usa o padrão da classe)
-            return_crops: Se deve retornar recortes dos objetos detectados
-            
-        Returns:
-            Dicionário com resultados da detecção
-        """
         if confidence is None:
             confidence = self.confidence_threshold
 
