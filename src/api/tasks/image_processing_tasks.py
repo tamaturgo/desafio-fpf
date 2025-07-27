@@ -1,83 +1,51 @@
-"""
-Tasks assíncronas para processamento de imagens com Celery.
-"""
-
 import os
 import traceback
 from datetime import datetime
 from typing import Dict, Any
 from celery import current_task
-
 from ..celery_config import celery_app
 from ...core.vision_processor import create_vision_processor
-from ...core.config import DEFAULT_MODEL_PATH, DEFAULT_CONFIG, LOGS_DIR, OUTPUTS_DIR
+from ...core.config import DEFAULT_MODEL_PATH, DEFAULT_CONFIG, OUTPUTS_DIR
 from ...core.utils.helpers import save_results_to_json
 from ..services.result_storage import ResultStorage
 from ...core.logging_config import get_logger
-
-# Logger para este módulo
 logger = get_logger(__name__)
-
 result_storage = ResultStorage()
 
 
 @celery_app.task(bind=True)
 def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = None) -> Dict[str, Any]:
-    """
-    Processa uma imagem de forma assíncrona usando Celery.
-    
-    Args:
-        image_path: Caminho para a imagem a ser processada
-        task_metadata: Metadados adicionais da task
-        
-    Returns:
-        Resultado do processamento
-    """
     task_id = self.request.id
     
     try:
         logger.info(f"Iniciando processamento da imagem: {image_path}")
-        
         current_task.update_state(
             state="PROCESSING",
             meta={"status": "processing", "message": "Processando imagem..."}
         )
-        
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Imagem não encontrada: {image_path}")
-        
         config = DEFAULT_CONFIG.copy()
         if task_metadata and "config" in task_metadata:
             config.update(task_metadata["config"])
-        
         processor = create_vision_processor(DEFAULT_MODEL_PATH, config)
-        
         result = processor.process_image(
             image_path,
             save_qr_crops=True,
             return_visualization=False,
-            remove_source_file=True  
+            remove_source_file=True
         )
-        
-        logger.info(f"Processamento concluído. QR codes encontrados: {len(result.get('qr_codes', []))}")
-        
-        # Log dos QR codes
         for qr in result.get('qr_codes', []):
             content = qr.get('content', 'ERRO')
             qr_id = qr['qr_id']
-            
             if content == 'PENDING_SCAN':
                 logger.warning(f"QR {qr_id} nao foi decodificado")
             else:
                 logger.info(f"QR {qr_id} decodificado: {content}")
-        
-        # Log dos QR codes diretos
         direct_qrs = result.get('direct_qr_codes', [])
         if direct_qrs:
-            logger.info(f"QR codes encontrados diretamente: {len(direct_qrs)}")
             for dqr in direct_qrs:
                 logger.info(f"QR direto: {dqr.get('content', 'N/A')}")
-        
         result["task_info"] = {
             "task_id": task_id,
             "image_path": image_path,
@@ -85,12 +53,8 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
             "metadata": task_metadata or {}
         }
         result["status"] = "PROCESSING"
-        from ...core.config import OUTPUTS_DIR
         output_path = os.path.join(OUTPUTS_DIR, f"result_{task_id}.json")
         save_results_to_json(result, output_path)
-        
-        logger.info(f"Processamento concluído com sucesso")
-        
         self.update_state(
             state="SUCCESS",
             meta={"status": "completed", "result": result}
@@ -102,7 +66,6 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
     except Exception as e:
         error_msg = f"Erro no processamento da imagem {image_path}: {str(e)}"
         logger.error(f"{error_msg}\n{traceback.format_exc()}")
-        
         current_task.update_state(
             state="FAILURE",
             meta={
@@ -128,7 +91,6 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
 
 @celery_app.task
 def cleanup_old_files():
-    """Task para limpeza de arquivos antigos."""
     pass
 
 
@@ -136,5 +98,3 @@ def cleanup_old_files():
 def health_check():
     """Task para verificação de saúde do sistema."""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-
