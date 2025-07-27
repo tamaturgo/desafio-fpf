@@ -144,9 +144,6 @@ Thumbs.db
 
 # Dataset files
 
-notebooks/merged_dataset/
-notebooks/dataset_warehouse/
-notebooks/combined_dataset/
-notebooks/merged_dataset.zip
+industry-1/
 predictions/
 runs/

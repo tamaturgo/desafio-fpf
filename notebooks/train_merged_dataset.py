@@ -5,13 +5,17 @@ Example training script for the merged dataset using YOLOv8.
 
 from ultralytics import YOLO
 import yaml
-from pathlib import Path
-
+from roboflow import Roboflow
 def train_merged_dataset():
     """Train YOLOv8 on the merged dataset."""
     
-    # Path to the merged dataset configuration
-    data_yaml_path = '/home/tamaturgo/desafio-fpf/notebooks/merged_dataset/data.yaml'
+    rf = Roboflow(api_key="xw99J0UeRMBQjpG90ERB")
+    project = rf.workspace("tamaturgo").project("industry-pb8yn")
+    version = project.version(1)
+    dataset = version.download("yolov8")
+
+    # O caminho para o data.yaml do roboflow
+    data_yaml_path = dataset.location + "/data.yaml"
     
     print("="*50)
     print("TRAINING YOLOV8 ON MERGED DATASET")
@@ -22,26 +26,34 @@ def train_merged_dataset():
         data_config = yaml.safe_load(f)
     
     print(f"Dataset configuration:")
-    print(f"  Classes: {data_config['nc']}")
     print(f"  Class names: {data_config['names']}")
     print(f"  Train path: {data_config['train']}")
     print(f"  Validation path: {data_config['val']}")
     print(f"  Test path: {data_config['test']}")
     
     # Initialize YOLO model
-    model = YOLO('yolov8n.pt')  # Use nano model for faster training
-    
+    model = YOLO('yolov8n.pt')  
+
     # Training parameters
     train_params = {
         'data': data_yaml_path,
-        'epochs': 80,          # Adjust as needed
-        'batch': 32,           # Adjust based on GPU memory
-        'imgsz': 640,          # Image size
-        'patience': 10,        # Early stopping patience
-        'save_period': 10,     # Save checkpoint every 10 epochs
+        'epochs': 180,          
+        'batch': 8,           
+        'imgsz': 640,          
+        'patience': 10,        
+        'save_period': 10,     
         'project': '/home/tamaturgo/desafio-fpf/runs/detect',
-        'name': 'merged_model',
-        'exist_ok': True
+        'name': 'combined_dataset_model',
+        'exist_ok': True,
+        'device': '0',  
+        'workers': 4, 
+        'cache': True,  
+        'verbose': True,
+        'pretrained': True, 
+        'optimizer': 'SGD',
+        'lr0': 0.01,  
+        'momentum': 0.937,
+        'weight_decay': 0.0005,  
     }
     
     print(f"\nTraining parameters:")
