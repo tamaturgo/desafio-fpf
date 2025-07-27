@@ -193,7 +193,7 @@ class YOLODetector:
         save_directory: Optional[str] = None
     ) -> List[Dict]:
         """
-        Extrai crops dos QR codes detectados.
+        Extrai crops dos QR codes detectados com margem adicional.
         
         Args:
             image: Imagem original
@@ -204,6 +204,7 @@ class YOLODetector:
             Lista com informações dos crops dos QR codes
         """
         qr_crops = []
+        margin = 5  # Margem em pixels para cada lado
         
         for i, qr_detection in enumerate(detections["qr_codes"]):
             bbox = qr_detection["bounding_box"]
@@ -211,15 +212,26 @@ class YOLODetector:
             y1 = bbox["y"]
             x2 = x1 + bbox["width"]
             y2 = y1 + bbox["height"]
+            
+            # Aplica margem e garante que não ultrapassa os limites da imagem
+            img_height, img_width = image.shape[:2]
+            
+            x1_margin = max(0, x1 - margin)
+            y1_margin = max(0, y1 - margin)
+            x2_margin = min(img_width, x2 + margin)
+            y2_margin = min(img_height, y2 + margin)
 
-            crop = image[y1:y2, x1:x2]
+            # Extrai o crop com margem
+            crop = image[y1_margin:y2_margin, x1_margin:x2_margin]
             
             crop_info = {
                 "qr_id": qr_detection["qr_id"],
                 "crop_array": crop, 
                 "confidence": qr_detection["confidence"],
-                "position": {"x": x1, "y": y1},
-                "size": {"width": bbox["width"], "height": bbox["height"]}
+                "position": {"x": x1_margin, "y": y1_margin},
+                "size": {"width": x2_margin - x1_margin, "height": y2_margin - y1_margin},
+                "original_bbox": {"x": x1, "y": y1, "width": bbox["width"], "height": bbox["height"]},
+                "margin_applied": margin
             }
             
             if save_directory:

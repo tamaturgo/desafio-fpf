@@ -16,7 +16,8 @@ class ImagePreprocessor:
         self,
         target_size: Tuple[int, int] = (640, 640),
         normalize: bool = True,
-        enhance_contrast: bool = True
+        enhance_contrast: bool = False,  # Mudança: padrão False para preservar cores
+        minimal_preprocessing: bool = False  # Novo: modo mínimo de pré-processamento
     ):
         """
         Inicializa o preprocessador de imagens.
@@ -25,10 +26,12 @@ class ImagePreprocessor:
             target_size: Tamanho alvo para redimensionamento (width, height)
             normalize: Se deve normalizar os valores dos pixels
             enhance_contrast: Se deve aplicar melhoria de contraste
+            minimal_preprocessing: Se deve usar pré-processamento mínimo (apenas redimensiona)
         """
         self.target_size = target_size
         self.normalize = normalize
         self.enhance_contrast = enhance_contrast
+        self.minimal_preprocessing = minimal_preprocessing
     
     def load_image(self, image_path: str) -> np.ndarray:
         """
@@ -93,7 +96,7 @@ class ImagePreprocessor:
     
     def enhance_image_quality(self, image: np.ndarray) -> np.ndarray:
         """
-        Aplica melhorias na qualidade da imagem.
+        Aplica melhorias na qualidade da imagem preservando as cores originais.
         
         Args:
             image: Imagem de entrada
@@ -104,15 +107,16 @@ class ImagePreprocessor:
         enhanced = image.copy()
         
         if self.enhance_contrast:
-            # Aplica CLAHE (Contrast Limited Adaptive Histogram Equalization)
-            lab = cv2.cvtColor(enhanced, cv2.COLOR_RGB2LAB)
-            l_channel, a_channel, b_channel = cv2.split(lab)
+            # Aplica melhoria de contraste mais suave que preserva cores
+            # Converte para float para operações mais precisas
+            enhanced_float = enhanced.astype(np.float32) / 255.0
             
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l_channel = clahe.apply(l_channel)
+            # Aplica correção gamma suave para melhorar contraste
+            gamma = 1.2  # Valor suave que melhora contraste sem alterar muito as cores
+            enhanced_float = np.power(enhanced_float, gamma)
             
-            enhanced = cv2.merge([l_channel, a_channel, b_channel])
-            enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2RGB)
+            # Converte de volta para uint8
+            enhanced = (enhanced_float * 255).astype(np.uint8)
         
         return enhanced
     
@@ -133,12 +137,20 @@ class ImagePreprocessor:
         """
         original_shape = image.shape[:2]  
         
-        enhanced = self.enhance_image_quality(image)
-        resized, scale_factor = self.resize_image(enhanced)
-        processed = resized.copy()
-        
-        if self.normalize:
-            processed = cv2.convertScaleAbs(processed, alpha=1.0, beta=0)
+        if self.minimal_preprocessing:
+            # Modo mínimo: apenas redimensiona preservando cores originais
+            resized, scale_factor = self.resize_image(image)
+            processed = resized.copy()
+        else:
+            # Pré-processamento completo
+            enhanced = self.enhance_image_quality(image)
+            resized, scale_factor = self.resize_image(enhanced)
+            processed = resized.copy()
+            
+            # Normalização mais suave que preserva as cores originais
+            if self.normalize:
+                # Apenas garante que os valores estão no range correto sem alterar a distribuição
+                processed = np.clip(processed, 0, 255).astype(np.uint8)
         
         metadata = {}
         if return_metadata:
@@ -147,8 +159,9 @@ class ImagePreprocessor:
                 "processed_shape": processed.shape[:2],
                 "scale_factor": scale_factor,
                 "target_size": self.target_size,
-                "normalized": self.normalize,
-                "enhanced": self.enhance_contrast
+                "normalized": self.normalize and not self.minimal_preprocessing,
+                "enhanced": self.enhance_contrast and not self.minimal_preprocessing,
+                "minimal_mode": self.minimal_preprocessing
             }
         
         return processed, metadata

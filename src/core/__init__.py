@@ -12,6 +12,11 @@ from .utils.helpers import (
     format_processing_summary,
     get_image_files_from_directory
 )
+from .utils.coordinate_utils import (
+    convert_coordinates_to_original,
+    convert_detections_to_original,
+    validate_coordinates
+)
 from .config import (
     DEFAULT_MODEL_PATH,
     DEFAULT_CONFIG,
@@ -31,6 +36,9 @@ __all__ = [
     "load_results_from_json",
     "format_processing_summary",
     "get_image_files_from_directory",
+    "convert_coordinates_to_original",
+    "convert_detections_to_original", 
+    "validate_coordinates",
     "DEFAULT_MODEL_PATH",
     "DEFAULT_CONFIG",
     "QR_CROPS_DIR",

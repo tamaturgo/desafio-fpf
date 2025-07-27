@@ -14,6 +14,7 @@ from pathlib import Path
 from .processing.image_preprocessor import ImagePreprocessor
 from .detection.yolo_detector import YOLODetector
 from .processing.qr_decoder import QRDecoder
+from .utils.coordinate_utils import convert_detections_to_original, validate_coordinates
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -76,8 +77,13 @@ class VisionProcessor:
         self.save_crops = save_crops
         self.save_processed_images = save_processed_images
         
-        # Inicializa os componentes
-        self.preprocessor = ImagePreprocessor()
+        # Inicializa os componentes com pré-processamento mínimo para preservar cores
+        self.preprocessor = ImagePreprocessor(
+            target_size=(640, 640),
+            normalize=False,
+            enhance_contrast=False,
+            minimal_preprocessing=True  # Ativa modo mínimo para preservar cores
+        )
         self.detector = YOLODetector(self.model_path, confidence_threshold)
         self.qr_decoder = QRDecoder()
         
@@ -126,13 +132,27 @@ class VisionProcessor:
             return_crops=False
         )
         
+        # Converte coordenadas das detecções para a imagem original
+        original_detections = convert_detections_to_original(detections, preprocessing_metadata)
+        
+        # Valida e corrige coordenadas para garantir que estão dentro da imagem
+        for obj in original_detections["detected_objects"]:
+            obj["bounding_box"] = validate_coordinates(
+                obj["bounding_box"], original_image.shape[:2]
+            )
+        
+        for qr in original_detections["qr_codes"]:
+            qr["bounding_box"] = validate_coordinates(
+                qr["bounding_box"], original_image.shape[:2]
+            )
+        
         # Processa QR codes se detectados
         qr_crops_info = []
-        if detections["qr_codes"]:
+        if original_detections["qr_codes"]:
             # Sempre extrai crops para decodificação, mesmo se não salvar
             qr_crops_info = self.detector.get_qr_crops(
                 original_image,
-                detections,
+                original_detections,
                 save_directory=self.qr_crops_dir if save_qr_crops else None
             )
             
@@ -140,7 +160,8 @@ class VisionProcessor:
             logger.info(f"Tentando decodificar {len(qr_crops_info)} QR codes detectados")
             for crop_info in qr_crops_info:
                 if crop_info.get("crop_array") is not None:
-                    qr_content = self.qr_decoder.decode_multiple_attempts(crop_info["crop_array"])
+                    qr_id = crop_info.get("qr_id", "QR_UNKNOWN")
+                    qr_content = self.qr_decoder.decode_multiple_attempts(crop_info["crop_array"], qr_id)
                     crop_info["decoded_content"] = qr_content or "DECODE_FAILED"
         
         # Decodifica QR codes diretamente da imagem original também
@@ -158,13 +179,13 @@ class VisionProcessor:
                 "image_source": image_source,
                 "preprocessing": preprocessing_metadata
             },
-            "detected_objects": self._format_objects(detections["detected_objects"]),
-            "qr_codes": self._format_qr_codes(detections["qr_codes"], qr_crops_info, direct_qr_codes),
+            "detected_objects": self._format_objects(original_detections["detected_objects"]),
+            "qr_codes": self._format_qr_codes(original_detections["qr_codes"], qr_crops_info, direct_qr_codes),
             "summary": {
-                "total_detections": len(detections["detected_objects"]) + len(detections["qr_codes"]),
-                "objects_count": len(detections["detected_objects"]),
-                "qr_codes_count": len(detections["qr_codes"]),
-                "classes_detected": detections["summary"]["classes_detected"],
+                "total_detections": len(original_detections["detected_objects"]) + len(original_detections["qr_codes"]),
+                "objects_count": len(original_detections["detected_objects"]),
+                "qr_codes_count": len(original_detections["qr_codes"]),
+                "classes_detected": original_detections["summary"]["classes_detected"],
                 "qr_crops_saved": len(qr_crops_info) if save_qr_crops else 0,
                 "qr_codes_decoded": len([qr for qr in direct_qr_codes if qr.get("content")])
             }
@@ -172,14 +193,14 @@ class VisionProcessor:
         
         if return_visualization:
             vis_image = self.detector.visualize_detections(
-                original_image, detections, show_confidence=True
+                original_image, original_detections, show_confidence=True
             )
             result["visualization"] = vis_image
         
         processed_image_path = None
         if self.save_processed_images:
             processed_image_path = self._save_processed_image(
-                original_image, detections, image_source
+                original_image, original_detections, image_source
             )
             result["processed_image"] = {
                 "saved": True,
@@ -462,7 +483,7 @@ def create_vision_processor(
         Instância configurada do VisionProcessor
     """
     default_config = {
-        "confidence_threshold": 0.9,
+        "confidence_threshold": 0.5,
         "enable_qr_detection": True,
         "save_crops": True,
         "save_processed_images": True

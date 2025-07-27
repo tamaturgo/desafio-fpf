@@ -20,7 +20,7 @@ UPLOADS_DIR = str(BASE_DIR / "uploads")
 LOGS_DIR = str(BASE_DIR / "logs")
 
 DEFAULT_CONFIG = {
-    "confidence_threshold": 0.9,
+    "confidence_threshold": 0.5,
     "qr_crops_dir": QR_CROPS_DIR,
     "processed_images_dir": PROCESSED_IMAGES_DIR,
     "enable_qr_detection": True,
@@ -29,20 +29,20 @@ DEFAULT_CONFIG = {
     "preprocessing_config": {
         "target_size": (640, 640),
         "normalize": True,
-        "enhance_contrast": True
+        "enhance_contrast": False  # Desabilitado por padrão para preservar cores
     }
 }
 
-# Configurações de pré-processamento
+# Configurações de pré-processamento (otimizado para preservar cores)
 PREPROCESSING_CONFIG = {
     "target_size": (640, 640),
     "normalize": True,
-    "enhance_contrast": True
+    "enhance_contrast": False  # Desabilitado por padrão para preservar cores
 }
 
 # Configurações de detecção
 DETECTION_CONFIG = {
-    "confidence_threshold": 0.9,
+    "confidence_threshold": 0.5,
     "iou_threshold": 0.45
 }
 
