@@ -84,20 +84,19 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
             "processed_at": datetime.now().isoformat(),
             "metadata": task_metadata or {}
         }
-        
-        result_storage.save_result(task_id, result)
-        
+        result["status"] = "PROCESSING"
         from ...core.config import OUTPUTS_DIR
         output_path = os.path.join(OUTPUTS_DIR, f"result_{task_id}.json")
         save_results_to_json(result, output_path)
         
         logger.info(f"Processamento concluído com sucesso")
         
-        current_task.update_state(
+        self.update_state(
             state="SUCCESS",
             meta={"status": "completed", "result": result}
         )
-        
+        result["status"] = "SUCCESS"
+        result_storage.save_result(task_id, result)
         return result
         
     except Exception as e:
@@ -113,7 +112,17 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
                 "exc_message": str(e)
             }
         )
-        
+        result = {
+            "task_info": {
+                "task_id": task_id,
+                "image_path": image_path,
+                "processed_at": datetime.now().isoformat(),
+                "metadata": task_metadata or {}
+            },
+            "status": "FAILURE",
+            "error": error_msg
+        }
+        result_storage.save_result(task_id, result)
         raise
 
 
