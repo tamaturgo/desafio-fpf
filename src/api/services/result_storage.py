@@ -20,17 +20,8 @@ from ..celery_config import REDIS_URL
 
 
 class ResultStorage:
-    """
-    Classe para gerenciamento de armazenamento de resultados no Redis.
-    """
     
     def __init__(self, redis_url: str = None):
-        """
-        Inicializa o storage de resultados.
-        
-        Args:
-            redis_url: URL de conexão com Redis
-        """
         self.redis_url = redis_url or REDIS_URL
         self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
         
@@ -41,17 +32,6 @@ class ResultStorage:
         self.default_ttl = 7 * 24 * 60 * 60
     
     def save_result(self, task_id: str, result: Dict[str, Any], ttl: int = None) -> bool:
-        """
-        Salva um resultado de processamento.
-        
-        Args:
-            task_id: ID da task
-            result: Resultado do processamento
-            ttl: Time-to-live em segundos
-            
-        Returns:
-            True se salvou com sucesso
-        """
         try:
             ttl = ttl or self.default_ttl
             
@@ -81,15 +61,6 @@ class ResultStorage:
             return False
     
     def get_result(self, task_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Recupera um resultado específico.
-        
-        Args:
-            task_id: ID da task
-            
-        Returns:
-            Resultado do processamento ou None se não encontrado
-        """
         try:
             result_key = f"{self.result_prefix}{task_id}"
             result_json = self.redis_client.get(result_key)
@@ -104,15 +75,6 @@ class ResultStorage:
             return None
     
     def get_task_metadata(self, task_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Recupera metadados de uma task.
-        
-        Args:
-            task_id: ID da task
-            
-        Returns:
-            Metadados da task ou None se não encontrado
-        """
         try:
             task_key = f"{self.task_prefix}{task_id}"
             metadata_json = self.redis_client.get(task_key)
@@ -127,15 +89,6 @@ class ResultStorage:
             return None
     
     def list_all_results(self, limit: int = 100) -> List[Dict[str, Any]]:
-        """
-        Lista todos os resultados disponíveis.
-        
-        Args:
-            limit: Limite de resultados a retornar
-            
-        Returns:
-            Lista de resultados
-        """
         try:
             # Obtém todos os task_ids do índice
             task_ids = self.redis_client.smembers(self.index_key)
@@ -161,17 +114,6 @@ class ResultStorage:
         end_date: datetime,
         limit: int = 100
     ) -> List[Dict[str, Any]]:
-        """
-        Lista resultados por período.
-        
-        Args:
-            start_date: Data inicial
-            end_date: Data final
-            limit: Limite de resultados
-            
-        Returns:
-            Lista de resultados no período
-        """
         try:
             all_results = self.list_all_results(limit * 2)  # Busca mais para filtrar
             
@@ -190,16 +132,6 @@ class ResultStorage:
             return []
     
     def list_results_by_status(self, status: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """
-        Lista resultados por status.
-        
-        Args:
-            status: Status dos resultados (completed, failed, processing)
-            limit: Limite de resultados
-            
-        Returns:
-            Lista de resultados com o status especificado
-        """
         try:
             all_results = self.list_all_results(limit * 2)
             
@@ -215,15 +147,6 @@ class ResultStorage:
             return []
     
     def delete_result(self, task_id: str) -> bool:
-        """
-        Remove um resultado específico.
-        
-        Args:
-            task_id: ID da task
-            
-        Returns:
-            True se removeu com sucesso
-        """
         try:
             result_key = f"{self.result_prefix}{task_id}"
             task_key = f"{self.task_prefix}{task_id}"
@@ -241,15 +164,6 @@ class ResultStorage:
             return False
     
     def cleanup_old_results(self, days_old: int = 7) -> Dict[str, int]:
-        """
-        Remove resultados antigos.
-        
-        Args:
-            days_old: Número de dias para considerar como antigo
-            
-        Returns:
-            Estatísticas da limpeza
-        """
         try:
             cutoff_date = datetime.now() - timedelta(days=days_old)
             all_results = self.list_all_results(1000)  # Busca muitos para limpeza
@@ -281,12 +195,6 @@ class ResultStorage:
             return {"deleted_count": 0, "error_count": 0, "error": str(e)}
     
     def get_storage_stats(self) -> Dict[str, Any]:
-        """
-        Obtém estatísticas do storage.
-        
-        Returns:
-            Estatísticas do armazenamento
-        """
         try:
             total_tasks = self.redis_client.scard(self.index_key)
             
@@ -311,16 +219,8 @@ class ResultStorage:
             return {"error": str(e)}
     
     def health_check(self) -> Dict[str, Any]:
-        """
-        Verifica a saúde da conexão com Redis.
-        
-        Returns:
-            Status da conexão
-        """
         try:
-            # Teste simples de ping
             pong = self.redis_client.ping()
-            
             if pong:
                 return {
                     "status": "healthy",

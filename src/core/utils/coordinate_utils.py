@@ -24,11 +24,8 @@ def convert_coordinates_to_original(
     target_size = preprocessing_metadata.get("target_size", (640, 640))
     original_shape = preprocessing_metadata.get("original_shape", target_size)
     
-    # Calcula os offsets usados durante o padding
     target_h, target_w = target_size
     orig_h, orig_w = original_shape
-    
-    # Dimensões da imagem redimensionada (antes do padding)
     new_w = int(orig_w * scale_factor)
     new_h = int(orig_h * scale_factor)
     
@@ -127,15 +124,13 @@ def validate_coordinates(
     
     x = max(0, min(bbox["x"], width - 1))
     y = max(0, min(bbox["y"], height - 1))
-    
-    # Ajusta width e height para não ultrapassar os limites
+
     max_width = width - x
     max_height = height - y
     
     width_bbox = min(bbox["width"], max_width)
     height_bbox = min(bbox["height"], max_height)
     
-    # Garante que width e height são pelo menos 1
     width_bbox = max(1, width_bbox)
     height_bbox = max(1, height_bbox)
     

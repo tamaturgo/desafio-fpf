@@ -19,7 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclui as rotas da API (que já têm o prefix /api/v1)
 app.include_router(image_routes.router)
 
 @app.get("/")

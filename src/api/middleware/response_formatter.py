@@ -2,7 +2,7 @@
 Middleware para padronização das respostas da API.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime
 
 
@@ -16,11 +16,9 @@ def format_api_response(result: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Resultado formatado no padrão esperado
     """
-    # Se já está no formato esperado ou é um erro, retorna como está
     if not result or "scan_metadata" not in result:
         return result
     
-    # Formatar objetos detectados
     formatted_objects = []
     for obj in result.get("detected_objects", []):
         formatted_obj = {
@@ -36,7 +34,6 @@ def format_api_response(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         formatted_objects.append(formatted_obj)
     
-    # Formatar QR codes
     formatted_qr_codes = []
     for qr in result.get("qr_codes", []):
         formatted_qr = {
@@ -50,7 +47,6 @@ def format_api_response(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         formatted_qr_codes.append(formatted_qr)
     
-    # Formatar metadata
     scan_metadata = result.get("scan_metadata", {})
     formatted_metadata = {
         "timestamp": scan_metadata.get("timestamp"),
@@ -58,7 +54,6 @@ def format_api_response(result: Dict[str, Any]) -> Dict[str, Any]:
         "processing_time_ms": scan_metadata.get("processing_time_ms")
     }
     
-    # Resultado final padronizado
     formatted_result = {
         "scan_metadata": formatted_metadata,
         "detected_objects": formatted_objects,
@@ -69,16 +64,6 @@ def format_api_response(result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def create_error_response(message: str, error_code: str = "PROCESSING_ERROR") -> Dict[str, Any]:
-    """
-    Cria uma resposta de erro padronizada.
-    
-    Args:
-        message: Mensagem de erro
-        error_code: Código do erro
-        
-    Returns:
-        Resposta de erro formatada
-    """
     return {
         "error": {
             "code": error_code,
@@ -89,16 +74,6 @@ def create_error_response(message: str, error_code: str = "PROCESSING_ERROR") ->
 
 
 def create_success_response(data: Any, message: str = "Success") -> Dict[str, Any]:
-    """
-    Cria uma resposta de sucesso padronizada.
-    
-    Args:
-        data: Dados da resposta
-        message: Mensagem de sucesso
-        
-    Returns:
-        Resposta de sucesso formatada
-    """
     return {
         "success": True,
         "message": message,

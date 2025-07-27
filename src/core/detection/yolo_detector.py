@@ -12,7 +12,6 @@ from ..logging_config import get_logger
 
 logger = get_logger(__name__)
 
-
 class YOLODetector:
     def __init__(self, model_path: str, confidence_threshold: float = 0.5):
         self.model_path = model_path
@@ -181,7 +180,7 @@ class YOLODetector:
             Lista com informações dos crops dos QR codes
         """
         qr_crops = []
-        margin = 5  # Margem em pixels para cada lado
+        margin = 5  
         
         for i, qr_detection in enumerate(detections["qr_codes"]):
             bbox = qr_detection["bounding_box"]
@@ -190,7 +189,6 @@ class YOLODetector:
             x2 = x1 + bbox["width"]
             y2 = y1 + bbox["height"]
             
-            # Aplica margem e garante que não ultrapassa os limites da imagem
             img_height, img_width = image.shape[:2]
             
             x1_margin = max(0, x1 - margin)
@@ -198,7 +196,6 @@ class YOLODetector:
             x2_margin = min(img_width, x2 + margin)
             y2_margin = min(img_height, y2 + margin)
 
-            # Extrai o crop com margem
             crop = image[y1_margin:y2_margin, x1_margin:x2_margin]
             
             crop_info = {

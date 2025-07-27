@@ -4,7 +4,6 @@ Configuração simples de logging para Docker.
 import logging
 import sys
 
-# Configuração básica que aparece no docker logs
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
