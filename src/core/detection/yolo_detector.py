@@ -113,18 +113,15 @@ class YOLODetector:
             }
         }
         
+        import uuid
         if result.boxes is not None and len(result.boxes) > 0:
             boxes = result.boxes.xyxy.cpu().numpy()  
             scores = result.boxes.conf.cpu().numpy() 
             classes = result.boxes.cls.cpu().numpy() 
             
-            object_id = 1
-            qr_id = 1
-            
             for i, (box, score, cls_id) in enumerate(zip(boxes, scores, classes)):
                 x1, y1, x2, y2 = box.astype(int)
                 class_name = self.class_names.get(int(cls_id), f"class_{int(cls_id)}")
-                
                 detection_data = {
                     "confidence": float(score),
                     "bounding_box": {
@@ -139,15 +136,13 @@ class YOLODetector:
                 if return_crops:
                     crop = original_image[y1:y2, x1:x2]
                     detection_data["crop"] = crop
-                
+                unique_id = str(uuid.uuid4())
                 if "qr" in class_name.lower() or "barcode" in class_name.lower():
-                    detection_data["qr_id"] = f"QR_{qr_id:03d}"
+                    detection_data["qr_id"] = f"QR_{unique_id}"
                     detections["qr_codes"].append(detection_data)
-                    qr_id += 1
                 else:
-                    detection_data["object_id"] = f"OBJ_{object_id:03d}"
+                    detection_data["object_id"] = f"OBJ_{unique_id}"
                     detections["detected_objects"].append(detection_data)
-                    object_id += 1
         
         detections["summary"]["total_objects"] = len(detections["detected_objects"])
         detections["summary"]["total_qr_codes"] = len(detections["qr_codes"])

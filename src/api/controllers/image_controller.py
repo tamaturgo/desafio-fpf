@@ -86,7 +86,7 @@ class ImageController:
     
     async def get_result(self, task_id: str) -> Dict[str, Any]:
         """
-        Obtém o resultado completo de uma task.
+        Obtém o resultado completo de uma task do PostgreSQL.
         
         Args:
             task_id: ID da task
@@ -96,27 +96,38 @@ class ImageController:
         """
         result = self.result_storage.get_result(task_id)
         
-        if not result:
-            task_result = AsyncResult(task_id, app=celery_app)
-            
-            if task_result.state == "PENDING":
+        if result:
+            return format_api_response(result)
+        
+        # Se não encontrou no PostgreSQL, pode estar ainda processando
+        # Verifica se existe a task no PostgreSQL
+        task_metadata = self.result_storage.get_task_metadata(task_id)
+        
+        if task_metadata:
+            if task_metadata.get("status") == "processing":
                 raise HTTPException(
                     status_code=202,
-                    detail="Task ainda está pendente. Use /tasks/{task_id}/progress para acompanhar."
-                )
-            elif task_result.state in ["PROCESSING"]:
-                raise HTTPException(
-                    status_code=202,
-                    detail="Task em processamento. Use /tasks/{task_id}/progress para acompanhar."
+                    detail="Task em processamento. Aguarde a conclusão."
                 )
             else:
                 raise HTTPException(
                     status_code=404,
                     detail="Resultado não encontrado"
                 )
-        
-        # Aplicar formatação padronizada à resposta
-        return format_api_response(result)
+        else:
+            # Verifica se ainda está no Celery/Redis (recém criada)
+            task_result = AsyncResult(task_id, app=celery_app)
+            
+            if task_result.state in ["PENDING", "PROCESSING"]:
+                raise HTTPException(
+                    status_code=202,
+                    detail="Task ainda está sendo processada. Aguarde a conclusão."
+                )
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Task não encontrada"
+                )
     
     async def list_results(
         self, 
@@ -217,12 +228,12 @@ class ImageController:
     async def health_check(self) -> Dict[str, Any]:
         """
         Verifica saúde do sistema.
-        
+
         Returns:
             Status dos componentes
         """
-        # Verifica Redis
-        redis_health = self.result_storage.health_check()
+        # Verifica Database
+        db_health = self.result_storage.health_check()
         
         # Verifica Celery (tenta obter info de workers)
         celery_inspect = celery_app.control.inspect()
@@ -243,7 +254,7 @@ class ImageController:
         }
         
         overall_status = "healthy"
-        if (redis_health["status"] != "healthy" or 
+        if (db_health["status"] != "healthy" or 
             celery_health["status"] != "healthy" or
             not all(directories_health.values())):
             overall_status = "unhealthy"
@@ -252,11 +263,9 @@ class ImageController:
             "status": overall_status,
             "timestamp": datetime.now().isoformat(),
             "components": {
-                "redis": redis_health,
+                "database": db_health,
                 "celery": celery_health,
                 "directories": directories_health
             }
         }
-
-
 image_controller = ImageController()

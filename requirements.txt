@@ -25,3 +25,8 @@ pydantic-settings==2.0.3
 # Utilities
 python-multipart==0.0.6
 aiofiles==23.2.1
+
+# PostgreSQL
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.30
+alembic==1.13.1

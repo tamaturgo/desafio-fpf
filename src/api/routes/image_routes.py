@@ -7,9 +7,20 @@ from ...models import (
     ImageUploadResponse, 
     TaskListResponse
 )
+from typing import List
 
 router = APIRouter(prefix="/api/v1", tags=["vision-processing"])
 
+@router.post("/images/upload-multiple", response_model=List[ImageUploadResponse])
+async def upload_multiple_images(files: List[UploadFile] = File(...)):
+    """
+    Upload de múltiplas imagens para processamento assíncrono.
+    """
+    responses = []
+    for file in files:
+        resp = await image_controller.upload_and_process(file)
+        responses.append(resp)
+    return responses
 
 @router.post("/images/upload", response_model=ImageUploadResponse)
 async def upload_image(file: UploadFile = File(...)):

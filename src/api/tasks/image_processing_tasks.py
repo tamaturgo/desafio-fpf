@@ -8,6 +8,7 @@ from ...core.vision_processor import create_vision_processor
 from ...core.config import DEFAULT_MODEL_PATH, DEFAULT_CONFIG, OUTPUTS_DIR
 from ...core.utils.helpers import save_results_to_json
 from ..services.result_storage import ResultStorage
+from ..services.redis_cleaner import redis_cleaner
 from ...core.logging_config import get_logger
 logger = get_logger(__name__)
 result_storage = ResultStorage()
@@ -16,6 +17,18 @@ result_storage = ResultStorage()
 @celery_app.task(bind=True)
 def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = None) -> Dict[str, Any]:
     task_id = self.request.id
+    
+    # Salva status inicial no PostgreSQL
+    initial_result = {
+        "status": "processing",
+        "task_info": {
+            "task_id": task_id,
+            "image_path": image_path,
+            "started_at": datetime.now().isoformat(),
+            "metadata": task_metadata or {}
+        }
+    }
+    result_storage.save_result(task_id, initial_result)
     
     try:
         logger.info(f"Iniciando processamento da imagem: {image_path}")
@@ -52,15 +65,23 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
             "processed_at": datetime.now().isoformat(),
             "metadata": task_metadata or {}
         }
-        result["status"] = "PROCESSING"
+        result["status"] = "completed"
+        
         output_path = os.path.join(OUTPUTS_DIR, f"result_{task_id}.json")
         save_results_to_json(result, output_path)
+        
+        success = result_storage.save_result(task_id, result)
+        if success:
+            logger.info(f"Resultado {task_id} salvo no PostgreSQL")
+            redis_cleaner.clear_task_result(task_id)
+        else:
+            logger.error(f"Erro ao salvar resultado {task_id} no PostgreSQL")
+        
         self.update_state(
             state="SUCCESS",
             meta={"status": "completed", "result": result}
         )
-        result["status"] = "SUCCESS"
-        result_storage.save_result(task_id, result)
+        
         return result
         
     except Exception as e:
@@ -82,10 +103,18 @@ def process_image_task(self, image_path: str, task_metadata: Dict[str, Any] = No
                 "processed_at": datetime.now().isoformat(),
                 "metadata": task_metadata or {}
             },
-            "status": "FAILURE",
+            "status": "failed",
             "error": error_msg
         }
-        result_storage.save_result(task_id, result)
+        
+        success = result_storage.save_result(task_id, result)
+        if success:
+            logger.info(f"Resultado de erro {task_id} salvo no PostgreSQL")
+            # Remove do Redis após salvar no PostgreSQL
+            redis_cleaner.clear_task_result(task_id)
+        else:
+            logger.error(f"Erro ao salvar resultado de erro {task_id} no PostgreSQL")
+        
         raise
 
 

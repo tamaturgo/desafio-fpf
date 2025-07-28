@@ -16,7 +16,11 @@ def format_api_response(result: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Resultado formatado no padrão esperado
     """
-    if not result or "scan_metadata" not in result:
+    if not result:
+        return result
+    
+    # Se não tem scan_metadata, retorna o resultado original
+    if "scan_metadata" not in result:
         return result
     
     formatted_objects = []

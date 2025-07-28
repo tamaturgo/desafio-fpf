@@ -1,4 +1,17 @@
 services:
+  # PostgreSQL - Banco de dados para persistência
+  postgres:
+    image: postgres:15-alpine
+    container_name: fpf_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=fpf_db
+      - POSTGRES_USER=fpf_user
+      - POSTGRES_PASSWORD=fpf_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
   # Redis - Backend para resultados do Celery
   redis:
     image: redis:7-alpine
@@ -34,6 +47,7 @@ services:
       - DEBUG=True
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672//
+      - POSTGRES_URL=postgresql://fpf_user:fpf_pass@postgres:5432/fpf_db
     volumes:
       - ./src:/app/src:ro  # Read-only para evitar alterações
       - ./uploads:/app/uploads
@@ -44,6 +58,7 @@ services:
     depends_on:
       - redis
       - rabbitmq
+      - postgres
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health').read()"]
       interval: 30s
@@ -75,5 +90,7 @@ services:
 volumes:
   redis_data:
   rabbitmq_data:
+
+  postgres_data:
 
 
