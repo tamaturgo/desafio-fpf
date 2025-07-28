@@ -23,46 +23,27 @@ class YOLODetector:
     
     def _load_model(self):
         try:
-            import ultralytics.nn.tasks
-            import ultralytics.nn.modules
+            import torch
+            original_load = torch.load
             
-            safe_globals = [
-                ultralytics.nn.tasks.DetectionModel,
-            ]
+            def safe_load(*args, **kwargs):
+                kwargs['weights_only'] = False
+                return original_load(*args, **kwargs)
+            
+            torch.load = safe_load
             
             try:
-                safe_globals.extend([
-                    ultralytics.nn.modules.Conv,
-                    ultralytics.nn.modules.C2f,
-                    ultralytics.nn.modules.SPPF,
-                    ultralytics.nn.modules.Detect
-                ])
-            except AttributeError:
-                pass  
-            torch.serialization.add_safe_globals(safe_globals)
+                self.model = YOLO(self.model_path)
+            finally:
+                torch.load = original_load
             
-            self.model = YOLO(self.model_path)
             if hasattr(self.model.model, 'names'):
                 self.class_names = self.model.model.names
+            logger.info(f"Modelo YOLOv8 carregado com sucesso: {self.model_path}")
+            
         except Exception as e:
-            try:
-                logger.warning(f"Tentativa padrão falhou: {e}")
-                original_load = torch.load
-                
-                def safe_load(*args, **kwargs):
-                    kwargs['weights_only'] = False
-                    return original_load(*args, **kwargs)
-                
-                torch.load = safe_load
-                
-                self.model = YOLO(self.model_path)
-                
-                torch.load = original_load
-                
-                if hasattr(self.model.model, 'names'):
-                    self.class_names = self.model.model.names
-            except Exception as fallback_e:
-                raise RuntimeError(f"Erro ao carregar modelo YOLO: {e}. Fallback também falhou: {fallback_e}")
+            logger.error(f"Erro ao carregar modelo YOLOv8: {e}")
+            raise RuntimeError(f"Falha no carregamento do modelo: {e}")
     
     def detect(
         self, 
@@ -281,3 +262,25 @@ class YOLODetector:
         (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         cv2.rectangle(image, (x1, y1 - text_height - 10), (x1 + text_width, y1), color, -1)
         cv2.putText(image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+
+class YOLODetectorSingleton:
+    _instance = None
+    _model_path = None
+    _confidence_threshold = None
+
+    @classmethod
+    def get_instance(cls, model_path: str, confidence_threshold: float = 0.5):
+        if (
+            cls._instance is None or
+            cls._model_path != model_path or
+            cls._confidence_threshold != confidence_threshold
+        ):
+            logger.info(f"Carregando modelo YOLO singleton: {model_path}")
+            cls._instance = YOLODetector(model_path, confidence_threshold)
+            cls._model_path = model_path
+            cls._confidence_threshold = confidence_threshold
+        else:
+            logger.debug("Reutilizando modelo YOLO já carregado em memória")
+        
+        return cls._instance

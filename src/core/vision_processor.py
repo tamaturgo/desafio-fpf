@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .detection.yolo_detector import YOLODetector
+from .detection.yolo_detector import YOLODetectorSingleton
 from .logging_config import get_logger
 from .processing.image_preprocessor import ImagePreprocessor
 from .processing.qr_decoder import QRDecoder
@@ -48,11 +48,22 @@ class VisionProcessor:
             enhance_contrast=False,
             minimal_preprocessing=True
         )
-        self.detector = YOLODetector(self.model_path, confidence_threshold)
+        self.detector = YOLODetectorSingleton.get_instance(self.model_path, confidence_threshold)
         self.qr_decoder = QRDecoder()
         
-        os.makedirs(self.qr_crops_dir, exist_ok=True)
-        os.makedirs(self.processed_images_dir, exist_ok=True)
+        if self.save_crops and self.qr_crops_dir:
+            try:
+                os.makedirs(self.qr_crops_dir, exist_ok=True)
+            except PermissionError:
+                logger.warning(f"Sem permissão para criar diretório QR crops: {self.qr_crops_dir}")
+                self.save_crops = False
+        
+        if self.save_processed_images and self.processed_images_dir:
+            try:
+                os.makedirs(self.processed_images_dir, exist_ok=True)
+            except PermissionError:
+                logger.warning(f"Sem permissão para criar diretório de imagens processadas: {self.processed_images_dir}")
+                self.save_processed_images = False
     
     def process_image(
         self,

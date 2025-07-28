@@ -15,6 +15,8 @@ celery_app = Celery(
     include=["src.api.tasks.image_processing_tasks"]
 )
 
+from . import celery_preload
+
 celery_app.conf.update(
     task_serializer="pickle",
     accept_content=["pickle", "json"],
