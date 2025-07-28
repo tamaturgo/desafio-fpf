@@ -13,20 +13,6 @@ from ..logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def save_results_to_json(results: Dict, output_path: str, indent: int = 2) -> bool:
-    try:
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        serializable_results = make_json_serializable(results)
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(serializable_results, f, indent=indent, ensure_ascii=False)
-        
-        return True
-    except Exception as e:
-        logger.error(f"Erro ao salvar JSON: {e}")
-        return False
-
-
 def make_json_serializable(obj: Any) -> Any:
     import numpy as np
     

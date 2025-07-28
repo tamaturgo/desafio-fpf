@@ -4,7 +4,6 @@ from typing import List, Dict, Optional
 from pyzbar import pyzbar
 from pyzbar.pyzbar import ZBarSymbol
 from ..logging_config import get_logger
-from ..utils.qr_utils import QRPreprocessor, QRQualityAssessor, QRDebug
 logger = get_logger(__name__)
 
 
@@ -38,7 +37,6 @@ class QRDecoder:
                     "height": rect.height
                 },
                 "polygon": [(point.x, point.y) for point in polygon],
-                "quality": QRQualityAssessor.assess(qr_data, rect)
             }
             results.append(qr_info)
         return results
@@ -51,28 +49,11 @@ class QRDecoder:
                 content = qr.data.decode('utf-8')
                 logger.info(f"QR decodificado com sucesso: '{content}'")
                 return content
-        logger.warning("Nenhum QR code foi decodificado do crop")
         return None
-    
-    def _preprocess_for_qr(self, gray_image: np.ndarray) -> np.ndarray:
-        return QRPreprocessor.preprocess(gray_image)
-    
-    def _advanced_qr_preprocessing(self, gray_image: np.ndarray) -> np.ndarray:
-        return QRPreprocessor.advanced(gray_image)
-    
-    def _apply_all_preprocessing_techniques(self, gray_image: np.ndarray) -> List[np.ndarray]:
-        return QRPreprocessor.apply_all(gray_image)
-    
-    def _assess_qr_quality(self, content: str, rect) -> str:
-        return QRQualityAssessor.assess(content, rect)
-    
-    def enhance_qr_crop(self, crop_image: np.ndarray) -> np.ndarray:
-        gray = cv2.cvtColor(crop_image, cv2.COLOR_RGB2GRAY) if len(crop_image.shape) == 3 else crop_image.copy()
-        return QRPreprocessor.advanced(gray)
+
     
     def decode_multiple_attempts(self, crop_image: np.ndarray, qr_id: str = "QR_UNKNOWN") -> Optional[str]:
         logger.info(f"decode_multiple_attempts: iniciando com crop {crop_image.shape} para {qr_id}")
-        self._save_debug_image(crop_image, "01_original.jpg", qr_id)
         strategies = [
             self._strategy_original,
             self._strategy_preprocessing,
@@ -83,50 +64,38 @@ class QRDecoder:
             self._strategy_thresholds
         ]
         for strategy in strategies:
-            result = strategy(crop_image, qr_id)
+            result = strategy(crop_image)
             if result:
                 return result
-        logger.warning("Todas as estratégias de decodificação falharam")
+        logger.warning(f"Nenhum QR code decodificado com sucesso para {qr_id}")
         return None
 
-    def _strategy_original(self, crop_image, qr_id):
+    def _strategy_original(self, crop_image, ):
         result = self.decode_qr_from_crop(crop_image)
-        if result:
-            logger.info(f"Estratégia 1 (original) bem-sucedida: '{result}'")
         return result
 
-    def _strategy_preprocessing(self, crop_image, qr_id):
+    def _strategy_preprocessing(self, crop_image):
         gray = cv2.cvtColor(crop_image, cv2.COLOR_RGB2GRAY) if len(crop_image.shape) == 3 else crop_image.copy()
-        self._save_debug_image(gray, "02_grayscale.jpg", qr_id)
-        # Suaviza: apenas binarização simples e thresholds suaves
         processed_versions = []
-        # Otsu
         _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         processed_versions.append(otsu)
-        # Thresholds suaves
         for tval in [100, 130, 160]:
             _, timg = cv2.threshold(gray, tval, 255, cv2.THRESH_BINARY)
             processed_versions.append(timg)
-        for i, processed_img in enumerate(processed_versions):
-            self._save_debug_image(processed_img, f"03_processed_v{i+1}.jpg", qr_id)
+        for _, processed_img in enumerate(processed_versions):
             result = self.decode_qr_from_crop(processed_img)
             if result:
-                logger.info(f"Estratégia 2.{i+1} (pré-processamento suave versão {i+1}) bem-sucedida: '{result}'")
                 return result
         return None
 
-    def _strategy_enhanced(self, crop_image, qr_id):
-        # Suaviza: apenas binarização simples
+    def _strategy_enhanced(self, crop_image):
         gray = cv2.cvtColor(crop_image, cv2.COLOR_RGB2GRAY) if len(crop_image.shape) == 3 else crop_image.copy()
         _, binarized = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
         result = self.decode_qr_from_crop(binarized)
-        if result:
-            logger.info(f"Estratégia 3 (binarização simples) bem-sucedida: '{result}'")
         return result
 
-    def _strategy_scales(self, crop_image, qr_id):
+    def _strategy_scales(self, crop_image):
         gray = cv2.cvtColor(crop_image, cv2.COLOR_RGB2GRAY) if len(crop_image.shape) == 3 else crop_image.copy()
-        # Suaviza: apenas resize leve e binarização simples
         for scale in [1.2, 1.5]:
             height, width = gray.shape
             new_width = int(width * scale)
@@ -135,37 +104,33 @@ class QRDecoder:
             _, binarized = cv2.threshold(resized, 127, 255, cv2.THRESH_BINARY)
             result = self.decode_qr_from_crop(binarized)
             if result:
-                logger.info(f"Estratégia 4 (escala {scale}x + binarização simples) bem-sucedida: '{result}'")
                 return result
         return None
 
-    def _strategy_rotations(self, crop_image, qr_id):
+    def _strategy_rotations(self, crop_image):
         for angle in [90, 180, 270]:
             rotated = self._rotate_image(crop_image, angle)
             result = self.decode_qr_from_crop(rotated)
             if result:
-                logger.info(f"Estratégia 5 (rotação {angle}°) bem-sucedida: '{result}'")
                 return result
         return None
 
-    def _strategy_rotated_processed(self, crop_image, qr_id):
+    def _strategy_rotated_processed(self, crop_image):
         gray = cv2.cvtColor(crop_image, cv2.COLOR_RGB2GRAY) if len(crop_image.shape) == 3 else crop_image.copy()
         _, binarized = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
         for angle in [90, 180, 270]:
             rotated_processed = self._rotate_image(binarized, angle)
             result = self.decode_qr_from_crop(rotated_processed)
             if result:
-                logger.info(f"Estratégia 6 (rotação {angle}° + binarização simples) bem-sucedida: '{result}'")
                 return result
         return None
 
-    def _strategy_thresholds(self, crop_image, qr_id):
+    def _strategy_thresholds(self, crop_image):
         gray = cv2.cvtColor(crop_image, cv2.COLOR_RGB2GRAY) if len(crop_image.shape) == 3 else crop_image.copy()
         for threshold_val in [100, 130, 160]:
             _, thresh_soft = cv2.threshold(gray, threshold_val, 255, cv2.THRESH_BINARY)
             result = self.decode_qr_from_crop(thresh_soft)
             if result:
-                logger.info(f"Estratégia 7 (threshold suave {threshold_val}) bem-sucedida: '{result}'")
                 return result
         return None
     
@@ -174,6 +139,3 @@ class QRDecoder:
         center = (width // 2, height // 2)
         rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
         return cv2.warpAffine(image, rotation_matrix, (width, height))
-    
-    def _save_debug_image(self, image: np.ndarray, filename: str, qr_id: str = "unknown"):
-        QRDebug.save(image, filename, qr_id, self.debug_mode, self.debug_dir)

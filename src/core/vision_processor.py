@@ -339,23 +339,13 @@ def create_vision_processor(
     model_path: str = None,
     config: Optional[Dict] = None
 ) -> VisionProcessor:
-    default_config = {
-        "confidence_threshold": 0.5,
-        "enable_qr_detection": True,
-        "save_crops": True,
-        "save_processed_images": True
+    config = config or {}
+    params = {
+        "confidence_threshold": config.get("confidence_threshold", 0.85),
+        "qr_crops_dir": config.get("qr_crops_dir"),
+        "processed_images_dir": config.get("processed_images_dir"),
+        "enable_qr_detection": config.get("enable_qr_detection", True),
+        "save_crops": config.get("save_crops", False),
+        "save_processed_images": config.get("save_processed_images", False)
     }
-    
-    if config:
-        valid_params = {
-            "confidence_threshold", 
-            "qr_crops_dir", 
-            "processed_images_dir",
-            "enable_qr_detection", 
-            "save_crops",
-            "save_processed_images"
-        }
-        filtered_config = {k: v for k, v in config.items() if k in valid_params}
-        default_config.update(filtered_config)
-    
-    return VisionProcessor(model_path, **default_config)
+    return VisionProcessor(model_path, **{k: v for k, v in params.items() if v is not None})

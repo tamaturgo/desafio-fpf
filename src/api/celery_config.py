@@ -16,15 +16,21 @@ celery_app = Celery(
 )
 
 celery_app.conf.update(
-    task_serializer="json",
-    accept_content=["json"],
-    result_serializer="json",
+    task_serializer="pickle",
+    accept_content=["pickle", "json"],
+    result_serializer="pickle", 
     timezone="UTC",
     enable_utc=True,
     task_track_started=True,
     task_time_limit=300,  
-    worker_prefetch_multiplier=1,
-    result_expires=3600  
+    worker_prefetch_multiplier=2, 
+    task_acks_late=True,  
+    worker_max_tasks_per_child=100,  
+    result_expires=3600,
+    worker_pool='prefork',
+    worker_disable_rate_limits=True,
+    task_compression='gzip',
+    result_compression='gzip'
 )
 
 celery_app.autodiscover_tasks(["src.api.tasks"])

@@ -42,14 +42,14 @@ services:
     build: .
     container_name: fpf_api
     ports:
-      - "8080:8000"  # Mapeando para porta 8080 no host
+      - "8080:8000"  
     environment:
       - DEBUG=True
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672//
       - POSTGRES_URL=postgresql://fpf_user:fpf_pass@postgres:5432/fpf_db
     volumes:
-      - ./src:/app/src:ro  # Read-only para evitar alterações
+      - ./src:/app/src:ro 
       - ./uploads:/app/uploads
       - ./qr_crops:/app/qr_crops
       - ./outputs:/app/outputs
@@ -83,14 +83,11 @@ services:
     depends_on:
       - redis
       - rabbitmq
-    command: celery -A src.api.celery_config:celery_app worker --loglevel=info
-
-
+    command: celery -A src.api.celery_config:celery_app worker --loglevel=info --concurrency=8
 
 volumes:
   redis_data:
   rabbitmq_data:
-
   postgres_data:
 
 

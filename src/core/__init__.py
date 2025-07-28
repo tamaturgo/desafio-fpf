@@ -7,7 +7,6 @@ from .vision_processor import VisionProcessor, create_vision_processor
 from .processing.image_preprocessor import ImagePreprocessor, create_preprocessor
 from .detection.yolo_detector import YOLODetector
 from .utils.helpers import (
-    save_results_to_json,
     load_results_from_json,
     get_image_files_from_directory
 )
@@ -31,7 +30,6 @@ __all__ = [
     "ImagePreprocessor", 
     "create_preprocessor",
     "YOLODetector",
-    "save_results_to_json",
     "load_results_from_json",
     "get_image_files_from_directory",
     "convert_coordinates_to_original",

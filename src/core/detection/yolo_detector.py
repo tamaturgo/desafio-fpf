@@ -7,6 +7,7 @@ import numpy as np
 import os
 from typing import Dict, List, Optional, Tuple
 from ultralytics import YOLO
+import torch
 
 from ..logging_config import get_logger
 
@@ -46,7 +47,6 @@ class YOLODetector:
         except Exception as e:
             try:
                 logger.warning(f"Tentativa padrão falhou: {e}")
-                import torch
                 original_load = torch.load
                 
                 def safe_load(*args, **kwargs):

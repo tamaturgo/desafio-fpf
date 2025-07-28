@@ -1,10 +1,6 @@
-"""
-Configurações padrão do sistema de visão computacional.
-"""
-
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent.parent.parent  # /app no container
+BASE_DIR = Path(__file__).parent.parent.parent  
 SRC_DIR = BASE_DIR / "src"
 CORE_DIR = SRC_DIR / "core"
 
@@ -19,12 +15,12 @@ UPLOADS_DIR = str(BASE_DIR / "uploads")
 LOGS_DIR = str(BASE_DIR / "logs")
 
 DEFAULT_CONFIG = {
-    "confidence_threshold": 0.5,
+    "confidence_threshold": 0.85,
     "qr_crops_dir": QR_CROPS_DIR,
     "processed_images_dir": PROCESSED_IMAGES_DIR,
     "enable_qr_detection": True,
-    "save_crops": True,
-    "save_processed_images": True,
+    "save_crops": False, 
+    "save_processed_images": False, 
     "preprocessing_config": {
         "target_size": (640, 640),
         "normalize": True,
