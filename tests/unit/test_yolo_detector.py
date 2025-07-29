@@ -100,3 +100,62 @@ class TestYOLODetector:
         assert crops[0]["confidence"] == 0.9
         assert "margin_applied" in crops[0]
         assert crops[0]["margin_applied"] == 5
+
+    def test_singleton_reuse_same_parameters(self):
+        from src.core.detection.yolo_detector import YOLODetectorSingleton
+        
+        with patch('src.core.detection.yolo_detector.YOLO') as mock_yolo_class:
+            mock_model = Mock()
+            mock_model.model.names = {0: "box", 1: "qr_code", 2: "pallet", 3: "forklift"}
+            mock_yolo_class.return_value = mock_model
+            
+            YOLODetectorSingleton._instance = None
+            YOLODetectorSingleton._model_path = None
+            YOLODetectorSingleton._confidence_threshold = None
+            
+            detector1 = YOLODetectorSingleton.get_instance("/fake/path/model.pt", 0.85)
+            
+            detector2 = YOLODetectorSingleton.get_instance("/fake/path/model.pt", 0.85)
+            
+            assert detector1 is detector2
+            assert mock_yolo_class.call_count == 1  
+
+    def test_singleton_recreate_different_parameters(self):
+        from src.core.detection.yolo_detector import YOLODetectorSingleton
+        
+        with patch('src.core.detection.yolo_detector.YOLO') as mock_yolo_class:
+            mock_model = Mock()
+            mock_model.model.names = {0: "box", 1: "qr_code", 2: "pallet", 3: "forklift"}
+            mock_yolo_class.return_value = mock_model
+            
+            YOLODetectorSingleton._instance = None
+            YOLODetectorSingleton._model_path = None
+            YOLODetectorSingleton._confidence_threshold = None
+            
+            detector1 = YOLODetectorSingleton.get_instance("/fake/path/model.pt", 0.85)
+            
+            detector2 = YOLODetectorSingleton.get_instance("/fake/path/model.pt", 0.5)
+            
+            assert detector1 is not detector2
+            assert mock_yolo_class.call_count == 2 
+
+    def test_singleton_consistent_with_config(self):
+        from src.core.detection.yolo_detector import YOLODetectorSingleton
+        from src.core.config import DEFAULT_CONFIG, DEFAULT_MODEL_PATH
+        
+        with patch('src.core.detection.yolo_detector.YOLO') as mock_yolo_class:
+            mock_model = Mock()
+            mock_model.model.names = {0: "box", 1: "qr_code", 2: "pallet", 3: "forklift"}
+            mock_yolo_class.return_value = mock_model
+            
+            YOLODetectorSingleton._instance = None
+            YOLODetectorSingleton._model_path = None
+            YOLODetectorSingleton._confidence_threshold = None
+            
+            confidence_threshold = DEFAULT_CONFIG.get("confidence_threshold", 0.85)
+            detector1 = YOLODetectorSingleton.get_instance(DEFAULT_MODEL_PATH, confidence_threshold)
+            
+            detector2 = YOLODetectorSingleton.get_instance(DEFAULT_MODEL_PATH, confidence_threshold)
+            
+            assert detector1 is detector2
+            assert mock_yolo_class.call_count == 1
