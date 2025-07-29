@@ -27,7 +27,7 @@ class VisionProcessor:
         model_path: str = None,
         qr_crops_dir: str = None,
         processed_images_dir: str = None,
-        confidence_threshold: float = 0.25,
+        confidence_threshold: float = 0.85,
         enable_qr_detection: bool = True,
         save_crops: bool = True,
         save_processed_images: bool = True
