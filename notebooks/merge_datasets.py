@@ -9,7 +9,6 @@ import os
 import shutil
 import yaml
 from pathlib import Path
-from glob import glob
 
 def read_classes(yaml_path):
     with open(yaml_path, 'r') as f:
@@ -92,10 +91,10 @@ def create_unified_data_yaml(dest_path, all_classes):
 
 
 def main():
-    notebooks_path = Path('/home/tamaturgo/desafio-fpf/notebooks')
-    ds1 = notebooks_path / 'dataset_warehouse'
-    ds2 = notebooks_path / 'merged_dataset'
-    out_ds = notebooks_path / 'combined_dataset'
+    notebooks_path = Path('/home/tamaturgo/desafio-fpf/notebooks/datasets')
+    ds1 = notebooks_path / 'merged_dataset'
+    ds2 = notebooks_path / 'forklift'
+    out_ds = notebooks_path / 'merged_dataset_full'
 
     print("Iniciando merge dos datasets...")
     print(f"Dataset 1: {ds1}")

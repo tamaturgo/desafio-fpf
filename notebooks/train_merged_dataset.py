@@ -9,14 +9,7 @@ from roboflow import Roboflow
 def train_merged_dataset():
     """Train YOLOv8 on the merged dataset."""
     
-    rf = Roboflow(api_key="xw99J0UeRMBQjpG90ERB")
-    project = rf.workspace("tamaturgo").project("industry-pb8yn")
-    version = project.version(1)
-    dataset = version.download("yolov8")
-
-    # O caminho para o data.yaml do roboflow
-    data_yaml_path = dataset.location + "/data.yaml"
-    
+    data_yaml_path = 'notebooks/datasets/merged_dataset/data.yaml'
     print("="*50)
     print("TRAINING YOLOV8 ON MERGED DATASET")
     print("="*50)
@@ -37,13 +30,13 @@ def train_merged_dataset():
     # Training parameters
     train_params = {
         'data': data_yaml_path,
-        'epochs': 180,          
+        'epochs': 80,          
         'batch': 8,           
         'imgsz': 640,          
         'patience': 10,        
         'save_period': 10,     
         'project': '/home/tamaturgo/desafio-fpf/runs/detect',
-        'name': 'combined_dataset_model',
+        'name': 'merged_dataset_model',
         'exist_ok': True,
         'device': '0',  
         'workers': 4, 
