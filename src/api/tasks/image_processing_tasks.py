@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from celery import current_task
 from ..celery_config import celery_app
-from ...core.vision_processor import create_vision_processor
+from ...core.processing.vision_processor import create_vision_processor
 from ...core.config import DEFAULT_MODEL_PATH, DEFAULT_CONFIG
 from ..services.result_storage import ResultStorage
 from ..services.redis_cleaner import redis_cleaner

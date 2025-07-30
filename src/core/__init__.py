@@ -3,7 +3,7 @@ Core module for computer vision processing.
 Provides integrated functionality for image preprocessing, YOLO detection, and QR code extraction.
 """
 
-from .vision_processor import VisionProcessor, create_vision_processor
+from .processing.vision_processor import VisionProcessor, create_vision_processor
 from .processing.image_preprocessor import ImagePreprocessor, create_preprocessor
 from .detection.yolo_detector import YOLODetector
 from .utils.helpers import (
