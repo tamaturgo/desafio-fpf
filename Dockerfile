@@ -28,16 +28,21 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Cria usuário não-root
-RUN useradd --create-home --shell /bin/bash app && \
-    mkdir -p uploads qr_crops outputs logs && \
+RUN useradd --create-home --shell /bin/bash --uid 1000 app && \
+    mkdir -p uploads qr_crops outputs/processed_images logs && \
     chown -R app:app /app
 
 # Copia código da aplicação
 COPY --chown=app:app ./src ./src
+
+# Copia script de entrypoint
+COPY --chown=app:app docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Muda para usuário não-root
 USER app
 
 EXPOSE 8000
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

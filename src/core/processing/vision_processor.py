@@ -189,7 +189,9 @@ class VisionProcessor:
             filename = f"processed_image_{timestamp}.jpg"
         
         output_path = os.path.join(self.processed_images_dir, filename)
-        cv2.imwrite(output_path, vis_image)
+        
+        vis_image_bgr = cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(output_path, vis_image_bgr)
         
         return output_path
     
