@@ -10,7 +10,7 @@ from celery.result import AsyncResult
 from ..celery_config import celery_app
 from ..services.result_storage import ResultStorage
 from ..tasks.image_processing_tasks import process_image_task
-from ..middleware.response_formatter import format_api_response, create_error_response
+from ..middleware.response_formatter import format_api_response
 from ...models import (
     ImageUploadResponse, 
     TaskListResponse,
@@ -19,10 +19,6 @@ from ...core.config import UPLOADS_DIR, SUPPORTED_IMAGE_EXTENSIONS
 
 
 class ImageController:
-    """
-    Controller para gerenciamento de upload e processamento assíncrono de imagens.
-    """
-    
     def __init__(self):
         self.upload_dir = Path(UPLOADS_DIR)
         self.upload_dir.mkdir(exist_ok=True)
@@ -33,15 +29,6 @@ class ImageController:
         self.max_file_size = 10 * 1024 * 1024
     
     async def upload_and_process(self, file: UploadFile) -> ImageUploadResponse:
-        """
-        Upload de imagem e enfileiramento para processamento assíncrono.
-        
-        Args:
-            file: Arquivo de imagem enviado
-            
-        Returns:
-            Resposta com task_id para acompanhamento
-        """
         if not file.content_type or not file.content_type.startswith('image/'):
             raise HTTPException(
                 status_code=400, 
@@ -85,22 +72,11 @@ class ImageController:
         )
     
     async def get_result(self, task_id: str) -> Dict[str, Any]:
-        """
-        Obtém o resultado completo de uma task do PostgreSQL.
-        
-        Args:
-            task_id: ID da task
-            
-        Returns:
-            Resultado completo ou erro
-        """
         result = self.result_storage.get_result(task_id)
         
         if result:
             return format_api_response(result)
         
-        # Se não encontrou no PostgreSQL, pode estar ainda processando
-        # Verifica se existe a task no PostgreSQL
         task_metadata = self.result_storage.get_task_metadata(task_id)
         
         if task_metadata:
@@ -135,17 +111,6 @@ class ImageController:
         limit: int = 50,
         status: Optional[str] = None
     ) -> TaskListResponse:
-        """
-        Lista resultados com paginação e filtros.
-        
-        Args:
-            page: Página (inicia em 1)
-            limit: Itens por página
-            status: Filtro por status (opcional)
-            
-        Returns:
-            Lista paginada de resultados
-        """
         if limit > 100:
             limit = 100
         
@@ -172,18 +137,6 @@ class ImageController:
         limit: int = 100,
         status: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """
-        Lista resultados por período.
-        
-        Args:
-            start_date: Data inicial
-            end_date: Data final
-            limit: Limite de resultados
-            status: Filtro por status (opcional)
-            
-        Returns:
-            Lista de resultados no período
-        """
         if limit > 1000:
             limit = 1000
         
@@ -197,15 +150,6 @@ class ImageController:
         return results
     
     async def delete_result(self, task_id: str) -> Dict[str, str]:
-        """
-        Remove um resultado específico.
-        
-        Args:
-            task_id: ID da task
-            
-        Returns:
-            Confirmação da remoção
-        """
         success = self.result_storage.delete_result(task_id)
         
         if not success:
@@ -217,25 +161,10 @@ class ImageController:
         return {"message": f"Resultado {task_id} removido com sucesso"}
     
     async def get_storage_stats(self) -> Dict[str, Any]:
-        """
-        Obtém estatísticas do storage.
-        
-        Returns:
-            Estatísticas do armazenamento
-        """
         return self.result_storage.get_storage_stats()
     
     async def health_check(self) -> Dict[str, Any]:
-        """
-        Verifica saúde do sistema.
-
-        Returns:
-            Status dos componentes
-        """
-        # Verifica Database
         db_health = self.result_storage.health_check()
-        
-        # Verifica Celery (tenta obter info de workers)
         celery_inspect = celery_app.control.inspect()
         active_workers = celery_inspect.active()
         
@@ -245,7 +174,6 @@ class ImageController:
             "worker_count": len(active_workers) if active_workers else 0
         }
         
-        # Verifica diretórios
         from ...core.config import QR_CROPS_DIR, OUTPUTS_DIR
         directories_health = {
             "uploads_dir": os.path.exists(UPLOADS_DIR),
