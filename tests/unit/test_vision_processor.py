@@ -117,7 +117,6 @@ class TestVisionProcessor:
 
     @patch('src.core.processing.vision_processor.convert_detections_to_original')
     def test_process_image_string_input(self, mock_convert, mock_processor):
-        """Testa processamento com entrada de string (caminho do arquivo)."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         test_image = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
@@ -143,7 +142,6 @@ class TestVisionProcessor:
         mock_prep.load_image.assert_called_once_with("/fake/path/image.jpg")
 
     def test_process_image_array_input(self, mock_processor):
-        """Testa processamento com entrada de array numpy."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         test_image = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
@@ -170,7 +168,6 @@ class TestVisionProcessor:
             mock_prep.load_image.assert_not_called()
 
     def test_process_image_with_visualization(self, mock_processor):
-        """Testa processamento com visualização habilitada."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         test_image = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
@@ -200,7 +197,6 @@ class TestVisionProcessor:
 
     @patch('src.core.processing.vision_processor.os.remove')
     def test_process_image_remove_source_file(self, mock_remove, mock_processor):
-        """Testa remoção do arquivo fonte após processamento."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         test_image = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
@@ -231,7 +227,6 @@ class TestVisionProcessor:
 
     @patch('src.core.processing.vision_processor.os.remove')
     def test_process_image_remove_source_file_error(self, mock_remove, mock_processor):
-        """Testa erro na remoção do arquivo fonte."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         test_image = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
@@ -262,7 +257,6 @@ class TestVisionProcessor:
 
     @patch('src.core.processing.vision_processor.cv2.imwrite')
     def test_save_processed_image(self, mock_imwrite, mock_processor):
-        """Testa salvamento de imagem processada."""
         processor, mock_detector, _, _ = mock_processor
         processor.save_processed_images = True
         processor.processed_images_dir = "/fake/output"
@@ -274,20 +268,16 @@ class TestVisionProcessor:
         mock_detector.visualize_detections.return_value = vis_image
         
         with patch('src.core.processing.vision_processor.datetime') as mock_datetime:
-            # Mock datetime to return a controlled value
             mock_now = Mock()
             mock_now.strftime.return_value = "20240729_143012_123456"
             mock_datetime.now.return_value = mock_now
             
             result_path = processor._save_processed_image(test_image, detections, "/path/to/source.jpg")
-            
-            # The code uses [:-3] to truncate microseconds, so "123456"[:-3] = "123"
             expected_path = "/fake/output/source_processed_20240729_143012_123.jpg"
             assert result_path == expected_path
             mock_imwrite.assert_called_once_with(expected_path, vis_image)
 
     def test_save_processed_image_array_source(self, mock_processor):
-        """Testa salvamento de imagem processada com fonte array."""
         processor, mock_detector, _, _ = mock_processor
         processor.save_processed_images = True
         processor.processed_images_dir = "/fake/output"
@@ -301,20 +291,17 @@ class TestVisionProcessor:
         with patch('src.core.processing.vision_processor.cv2.imwrite') as mock_imwrite, \
              patch('src.core.processing.vision_processor.datetime') as mock_datetime:
             
-            # Mock datetime to return a controlled value
             mock_now = Mock()
             mock_now.strftime.return_value = "20240729_143012_123456"
             mock_datetime.now.return_value = mock_now
             
             result_path = processor._save_processed_image(test_image, detections, "array")
             
-            # The code uses [:-3] to truncate microseconds, so "123456"[:-3] = "123"
             expected_path = "/fake/output/processed_image_20240729_143012_123.jpg"
             assert result_path == expected_path
             mock_imwrite.assert_called_once_with(expected_path, vis_image)
 
     def test_format_qr_codes_with_crops_and_direct(self, mock_processor):
-        """Testa formatação de QR codes com crops e detecção direta."""
         processor, _, _, _ = mock_processor
         
         qr_detections = [{
@@ -339,12 +326,11 @@ class TestVisionProcessor:
         
         assert len(formatted) == 1
         assert formatted[0]["qr_id"] == "QR_001"
-        assert formatted[0]["content"] == "CROP_CONTENT"  # Crop tem prioridade
+        assert formatted[0]["content"] == "CROP_CONTENT" 
         assert formatted[0]["decode_source"] == "crop"
         assert formatted[0]["crop_info"]["saved"] is True
 
     def test_format_qr_codes_direct_only(self, mock_processor):
-        """Testa formatação de QR codes apenas com detecção direta."""
         processor, _, _, _ = mock_processor
         
         qr_detections = [{
@@ -368,7 +354,6 @@ class TestVisionProcessor:
         assert formatted[0]["crop_info"]["saved"] is False
 
     def test_format_qr_codes_no_decode(self, mock_processor):
-        """Testa formatação de QR codes sem decodificação."""
         processor, _, _, _ = mock_processor
         
         qr_detections = [{
@@ -384,7 +369,6 @@ class TestVisionProcessor:
         assert formatted[0]["decode_source"] == "none"
 
     def test_process_batch_success(self, mock_processor):
-        """Testa processamento em lote com sucesso."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         test_image = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
@@ -414,7 +398,6 @@ class TestVisionProcessor:
             assert results[1]["batch_info"]["index"] == 1
 
     def test_process_batch_with_error(self, mock_processor):
-        """Testa processamento em lote com erro em uma imagem."""
         processor, mock_detector, mock_qr, mock_prep = mock_processor
         
         mock_prep.load_image.side_effect = [
@@ -446,7 +429,6 @@ class TestVisionProcessor:
             assert results[1]["error"] == "Error loading image"
 
     def test_get_processing_stats(self, mock_processor):
-        """Testa geração de estatísticas de processamento."""
         processor, _, _, _ = mock_processor
         
         results = [
@@ -487,7 +469,6 @@ class TestVisionProcessor:
         assert stats["classes_summary"]["forklift"] == 1
 
     def test_processor_directory_creation_permission_error(self):
-        """Testa erro de permissão na criação de diretórios."""
         with patch('src.core.processing.vision_processor.YOLODetectorSingleton'), \
              patch('src.core.processing.vision_processor.QRDecoder'), \
              patch('src.core.processing.vision_processor.ImagePreprocessor'), \
@@ -502,17 +483,13 @@ class TestVisionProcessor:
                 processed_images_dir="/fake/processed"
             )
             
-            # Should disable saving due to permission error
             assert processor.save_crops is False
             assert processor.save_processed_images is False
 
 
 class TestCreateVisionProcessor:
-    """Testes para a função create_vision_processor."""
-
     @patch('src.core.processing.vision_processor.VisionProcessor')
     def test_create_vision_processor_default_config(self, mock_vision_processor):
-        """Testa criação com configuração padrão."""
         mock_instance = Mock()
         mock_vision_processor.return_value = mock_instance
         
@@ -523,7 +500,6 @@ class TestCreateVisionProcessor:
 
     @patch('src.core.processing.vision_processor.VisionProcessor')
     def test_create_vision_processor_custom_config(self, mock_vision_processor):
-        """Testa criação com configuração customizada."""
         mock_instance = Mock()
         mock_vision_processor.return_value = mock_instance
         
@@ -551,20 +527,18 @@ class TestCreateVisionProcessor:
 
     @patch('src.core.processing.vision_processor.VisionProcessor')
     def test_create_vision_processor_none_values_filtered(self, mock_vision_processor):
-        """Testa que valores None são filtrados."""
         mock_instance = Mock()
         mock_vision_processor.return_value = mock_instance
         
         config = {
             "confidence_threshold": 0.7,
-            "qr_crops_dir": None,  # Should be filtered out
+            "qr_crops_dir": None,  
             "processed_images_dir": "/custom/processed",
             "save_crops": True
         }
         
         result = create_vision_processor("/custom/model.pt", config)
         
-        # qr_crops_dir should not be passed since it's None
         mock_vision_processor.assert_called_once_with(
             "/custom/model.pt",
             confidence_threshold=0.7,
