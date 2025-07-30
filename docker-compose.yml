@@ -64,7 +64,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    command: docker-entrypoint.sh uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Celery Worker para processamento de imagens
   celery_worker:
@@ -83,7 +83,7 @@ services:
     depends_on:
       - redis
       - rabbitmq
-    command: docker-entrypoint.sh celery -A src.api.celery_config:celery_app worker --loglevel=info --concurrency=8
+    command: celery -A src.api.celery_config:celery_app worker --loglevel=info --concurrency=8
 
 volumes:
   redis_data:
