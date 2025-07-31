@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema WMS - Visão Computacional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/custom.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#64748b',
+                        success: '#16a34a',
+                        warning: '#ca8a04',
+                        danger: '#dc2626',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+                            <path fill-rule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-xl font-semibold text-gray-900">Sistema WMS - Visão Computacional</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="healthCheck" class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                        Sistema Online
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <h2 class="text-lg font-semibold text-gray-900 mb-6">Captura de Imagem</h2>
+            
+            <!-- Camera and Upload Tabs -->
+            <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6">
+                <button id="cameraTab" class="flex-1 py-2 px-4 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm transition-all">
+                    📷 Webcam
+                </button>
+                <button id="uploadTab" class="flex-1 py-2 px-4 text-sm font-medium rounded-md text-gray-500 hover:text-gray-900 transition-all">
+                    📁 Upload
+                </button>
+            </div>
+
+            <!-- Camera Section -->
+            <div id="cameraSection" class="space-y-4">
+                <div class="flex justify-center">
+                    <div class="relative">
+                        <video id="video" class="w-96 h-72 bg-gray-200 rounded-lg object-cover hidden" autoplay></video>
+                        <canvas id="canvas" class="hidden"></canvas>
+                        <div id="cameraPlaceholder" class="w-96 h-72 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                            <div class="text-center">
+                                <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                                </svg>
+                                <p class="text-gray-500">Camera desativada</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button id="startCamera" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        Iniciar Camera
+                    </button>
+                    <button id="capturePhoto" class="bg-success text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors hidden">
+                        Capturar Foto
+                    </button>
+                    <button id="stopCamera" class="bg-danger text-white px-6 py-2 rounded-lg hover:bg-red-600 transition-colors hidden">
+                        Parar Camera
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div id="uploadSection" class="hidden">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-lg font-medium text-gray-900 mb-2">Arraste uma imagem ou clique para selecionar</p>
+                    <p class="text-sm text-gray-500 mb-4">PNG, JPG, JPEG até 10MB</p>
+                    <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    <button id="selectFile" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        Selecionar Arquivo
+                    </button>
+                </div>
+                <div id="uploadPreview" class="mt-4 hidden">
+                    <img id="previewImage" class="max-w-xs max-h-48 rounded-lg mx-auto object-cover">
+                    <div class="text-center mt-2">
+                        <button id="processUpload" class="bg-success text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            Processar Imagem
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Status -->
+        <div id="processingStatus" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 hidden">
+            <div class="flex items-center">
+                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                <div>
+                    <p class="text-blue-800 font-medium">Processando imagem...</p>
+                    <p class="text-blue-600 text-sm" id="processingTaskId">Task ID: </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Current Results -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-6">Resultado Atual</h2>
+                <div id="currentResult" class="space-y-4">
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                        </svg>
+                        <p>Nenhum resultado disponível</p>
+                        <p class="text-sm text-gray-400">Capture ou envie uma imagem para começar</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Results -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900">Histórico de Resultados</h2>
+                    <button id="refreshHistory" class="text-primary hover:text-blue-600 font-medium text-sm">
+                        Atualizar
+                    </button>
+                </div>
+                <div id="resultsHistory" class="space-y-3 max-h-96 overflow-y-auto">
+                    <div class="text-center py-8 text-gray-500">
+                        <svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                        </svg>
+                        <p>Nenhum histórico disponível</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <div class="flex items-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-4"></div>
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">Processando...</h3>
+                    <p class="text-gray-500" id="loadingMessage">Aguarde enquanto processamos sua imagem</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
